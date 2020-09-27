@@ -16,10 +16,10 @@ func main() {
 	}
 	session := NewSession("session.json", u)
 
-	implicit := NewInstance(config, session)
-	req, _ := http.NewRequest("GET", implicit.AuthorizationURL, nil)
+	flow := NewInstance(config, session)
+	req, _ := http.NewRequest("GET", flow.AuthorizationURL.String(), nil)
 
-	resp, err := implicit.Session.Client.Do(req)
+	resp, err := flow.Session.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
