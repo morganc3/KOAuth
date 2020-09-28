@@ -3,27 +3,25 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"net/url"
 )
 
+var config KOAuthConfig
+var session KOAuthSession
+
 func main() {
-	config := NewConfig("config.json")
+	config = NewConfig("config.json")
 
 	u, err := url.Parse(config.OAuthConfig.Endpoint.AuthURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	session := NewSession("session.json", u)
+	session = NewSession("session.json", u)
 
-	flow := NewInstance(config, session)
-	req, _ := http.NewRequest("GET", flow.AuthorizationURL.String(), nil)
+	implicitInstance := NewInstance(IMPLICIT)
+	implicitInstance.DoAuthorizationRequest()
 
-	resp, err := flow.Session.Client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	resp := implicitInstance.AuthorizationRequest.Response
 	ur := resp.Header.Get("Location")
 	implicitAccessToken := getImplicitAccessTokenFromURL(ur)
 	fmt.Println(implicitAccessToken)

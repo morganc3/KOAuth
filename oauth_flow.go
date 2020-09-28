@@ -10,23 +10,64 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type FlowType string
+
+const (
+	IMPLICIT           = "IMPLICIT"
+	AUTHORIZATION_FLOW = "AUTHORIZATION_FLOW"
+)
+
+const FLOW_ERROR = "ERROR"
+
 type FlowInstance struct {
 	Ctx                  context.Context
-	Session              KOAuthSession
-	Config               KOAuthConfig
+	FlowType             FlowType
 	AuthorizationURL     *url.URL
-	AuthorizationRequest AuthorizationRequest
+	AuthorizationRequest *AuthorizationRequest
+	ExchangeRequest      *ExchangeRequest
 }
 
 type AuthorizationRequest struct {
-	Values   map[string][]string
 	Request  *http.Request
 	Response *http.Response
 }
 
-func (i *FlowInstance) GenerateAuthorizationURL(state string) *url.URL {
-	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam("response_type", "token")
-	URLString := i.Config.OAuthConfig.AuthCodeURL(state, option)
+type ExchangeRequest struct {
+	Request  *http.Request
+	Response *http.Response
+}
+
+func NewInstance(ft FlowType) FlowInstance {
+	ctx := context.Background()
+	flowInstance := FlowInstance{
+		Ctx:      ctx,
+		FlowType: ft,
+	}
+	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value")
+	return flowInstance
+}
+
+func (i *FlowInstance) DoAuthorizationRequest() {
+	urlStr := i.AuthorizationURL.String()
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		i.Ctx = context.WithValue(i.Ctx, FLOW_ERROR, err)
+		return
+	}
+
+	resp, err := session.Client.Do(req)
+	if err != nil {
+		i.Ctx = context.WithValue(i.Ctx, FLOW_ERROR, err)
+		return
+	}
+
+	i.AuthorizationRequest.Request = req
+	i.AuthorizationRequest.Response = resp
+}
+
+func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state string) *url.URL {
+	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam(RESPONSE_TYPE, string(flowType))
+	URLString := config.OAuthConfig.AuthCodeURL(state, option)
 	URL, err := url.Parse(URLString)
 	if err != nil {
 		log.Fatal(err)
@@ -34,10 +75,23 @@ func (i *FlowInstance) GenerateAuthorizationURL(state string) *url.URL {
 	return URL
 }
 
+func getImplicitAccessTokenFromURL(urlString string) string {
+	u, err := url.Parse(urlString)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	values, _ := url.ParseQuery(u.Fragment)
+	tokenString := values.Get(ACCESS_TOKEN)
+	return tokenString
+}
+
 // Sets value of the first key in the URL Query
 func (i *FlowInstance) SetQueryParameter(key, value string) {
 	url := i.AuthorizationURL
-	url.Query().Set(key, value)
+	q := url.Query()
+	q.Set(key, value)
+	url.RawQuery = q.Encode()
 }
 
 // Adds a query parameter value. If a value already exists with
@@ -64,27 +118,7 @@ func (i *FlowInstance) GetQueryParameter(key string) []string {
 // Delete first instance of key pair in URL
 func (i *FlowInstance) DelQueryParameter(key string) {
 	url := i.AuthorizationURL
-	url.Query().Del(key)
-}
-
-func NewInstance(conf KOAuthConfig, sess KOAuthSession) FlowInstance {
-	ctx := context.Background()
-	flowInstance := FlowInstance{
-		Ctx:     ctx,
-		Config:  conf,
-		Session: sess,
-	}
-	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL("random_state_value")
-	return flowInstance
-}
-
-func getImplicitAccessTokenFromURL(urlString string) string {
-	u, err := url.Parse(urlString)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	values, _ := url.ParseQuery(u.Fragment)
-	tokenString := values.Get("access_token")
-	return tokenString
+	q := url.Query()
+	q.Del(key)
+	url.RawQuery = q.Encode()
 }
