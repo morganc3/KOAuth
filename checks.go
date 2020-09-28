@@ -27,6 +27,7 @@ func NewCheck(name, risk, confidence string, flowType FlowType, checkFunction Ch
 	return check
 }
 
+// TODO - check error in context here
 // Perform check, check returns bool for if it was passed
 func (c *Check) DoCheck() {
 	c.Pass = c.CheckFunc(c.FlowInstance)

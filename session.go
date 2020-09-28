@@ -50,6 +50,7 @@ func readSessionInformation(sessionFile string) KOAuthSession {
 	return sess
 }
 
+// TODO - this should check both authz code flow and implicit flow
 // Attempt normal implicit flow to see if we successfully get an Access Token back
 func (session *KOAuthSession) validateSession() (*FlowInstance, bool) {
 	implicitInstance := NewInstance(IMPLICIT_FLOW_RESPONSE_TYPE)
