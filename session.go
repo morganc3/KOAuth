@@ -50,6 +50,19 @@ func readSessionInformation(sessionFile string) KOAuthSession {
 	return sess
 }
 
+// Attempt normal implicit flow to see if we successfully get an Access Token back
+func (session *KOAuthSession) validateSession() (*FlowInstance, bool) {
+	implicitInstance := NewInstance(IMPLICIT_FLOW_RESPONSE_TYPE)
+	implicitInstance.DoAuthorizationRequest()
+
+	resp := implicitInstance.AuthorizationRequest.Response
+	ur := resp.Header.Get("Location")
+
+	implicitAccessToken := getImplicitAccessTokenFromURL(ur)
+	ok := len(implicitAccessToken) > 0
+	return implicitInstance, ok
+}
+
 func (session *KOAuthSession) setInitialCookies(jar *Jar, u *url.URL) {
 	var cookies []*http.Cookie
 	for k, v := range session.InitialCookies {

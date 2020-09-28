@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,8 +12,8 @@ import (
 type FlowType string
 
 const (
-	IMPLICIT           = "IMPLICIT"
-	AUTHORIZATION_FLOW = "AUTHORIZATION_FLOW"
+	IMPLICIT_FLOW_RESPONSE_TYPE           = "token"
+	AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE = "code"
 )
 
 const FLOW_ERROR = "ERROR"
@@ -37,14 +36,16 @@ type ExchangeRequest struct {
 	Response *http.Response
 }
 
-func NewInstance(ft FlowType) FlowInstance {
+func NewInstance(ft FlowType) *FlowInstance {
 	ctx := context.Background()
 	flowInstance := FlowInstance{
-		Ctx:      ctx,
-		FlowType: ft,
+		Ctx:                  ctx,
+		FlowType:             ft,
+		AuthorizationRequest: new(AuthorizationRequest),
+		ExchangeRequest:      new(ExchangeRequest),
 	}
 	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value")
-	return flowInstance
+	return &flowInstance
 }
 
 func (i *FlowInstance) DoAuthorizationRequest() {
@@ -56,6 +57,7 @@ func (i *FlowInstance) DoAuthorizationRequest() {
 	}
 
 	resp, err := session.Client.Do(req)
+
 	if err != nil {
 		i.Ctx = context.WithValue(i.Ctx, FLOW_ERROR, err)
 		return
@@ -84,41 +86,4 @@ func getImplicitAccessTokenFromURL(urlString string) string {
 	values, _ := url.ParseQuery(u.Fragment)
 	tokenString := values.Get(ACCESS_TOKEN)
 	return tokenString
-}
-
-// Sets value of the first key in the URL Query
-func (i *FlowInstance) SetQueryParameter(key, value string) {
-	url := i.AuthorizationURL
-	q := url.Query()
-	q.Set(key, value)
-	url.RawQuery = q.Encode()
-}
-
-// Adds a query parameter value. If a value already exists with
-// the specified key, this will add a second key/value pair in the URL
-func (i *FlowInstance) AddQueryParameter(key, value string) {
-	url := i.AuthorizationURL
-	queryString := url.RawQuery
-	if queryString == "" {
-		queryString += fmt.Sprintf("%s=%s", key, value)
-	} else {
-		queryString += fmt.Sprintf("&%s=%s", key, value)
-	}
-
-	url.RawQuery = queryString
-}
-
-// Returns all values in the URL query with the specified key
-func (i *FlowInstance) GetQueryParameter(key string) []string {
-	url := i.AuthorizationURL
-	values := url.Query()[key]
-	return values
-}
-
-// Delete first instance of key pair in URL
-func (i *FlowInstance) DelQueryParameter(key string) {
-	url := i.AuthorizationURL
-	q := url.Query()
-	q.Del(key)
-	url.RawQuery = q.Encode()
 }
