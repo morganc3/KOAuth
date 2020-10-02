@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"log"
 	"net/url"
 
@@ -98,9 +99,10 @@ func pkceSupported(fi *FlowInstance) bool {
 	// TODO probably add helper function here to add pkce params
 	data := []byte("random-code-verifier-value!")
 	hash := sha256.Sum256(data)
-	pkceCodeChallenge := string(hash[:])
-	SetQueryParameter(fi.AuthorizationURL, CODE_CHALLENGE, pkceCodeChallenge)
-	SetQueryParameter(fi.AuthorizationURL, CODE_CHALLENGE_METHOD, pkceCodeChallenge)
+
+	pkceCodeChallenge := hex.EncodeToString(hash[:])
+	SetQueryParameter(fi.AuthorizationURL, PKCE_CODE_CHALLENGE, pkceCodeChallenge)
+	SetQueryParameter(fi.AuthorizationURL, PKCE_CODE_CHALLENGE_METHOD, PKCE_S256)
 
 	fi.DoAuthorizationRequest()
 	resp := fi.AuthorizationRequest.Response
@@ -110,12 +112,15 @@ func pkceSupported(fi *FlowInstance) bool {
 		log.Println(err)
 		return false
 	}
-	authorizationCode := GetQueryParameterFirst(redirectedTo, AUTHORIZATION_CODE)
-	opt := oauth2.SetAuthURLParam(CODE_CHALLENGE, pkceCodeChallenge)
-	tok, err := config.OAuthConfig.Exchange(fi.Ctx, authorizationCode, opt)
 
-	if err != nil || !(len(tok.AccessToken) > 0) {
+	authorizationCode := GetQueryParameterFirst(redirectedTo, AUTHORIZATION_CODE)
+	opt := oauth2.SetAuthURLParam(PKCE_CODE_VERIFIER, string(data))
+	opt2 := oauth2.SetAuthURLParam(PKCE_CODE_CHALLENGE_METHOD, PKCE_S256)
+	tok, err := config.OAuthConfig.Exchange(fi.Ctx, authorizationCode, opt, opt2)
+
+	if err == nil && len(tok.AccessToken) > 0 {
 		return true
 	}
+	log.Println(err)
 	return false
 }

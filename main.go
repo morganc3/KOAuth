@@ -33,7 +33,7 @@ func main() {
 	chk.DoCheck()
 	fmt.Println(chk.Pass)
 
-	chk = NewCheck("pkce-supported", "medium", "certain", AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, stateSupported)
+	chk = NewCheck("pkce-supported", "medium", "certain", AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, pkceSupported)
 	chk.DoCheck()
 	fmt.Println(chk.Pass)
 
@@ -59,8 +59,8 @@ func exitWithAuthInfo(fi *FlowInstance) {
 		log.Fatal(err)
 	}
 	log.Printf("Could not perform normal implicit flow, cancelling scan")
-	url := config.OAuthConfig.AuthCodeURL("stateval")
-	log.Printf("You likely need to reauthenticate here: %s", url)
+	url := fi.GenerateAuthorizationURL(IMPLICIT_FLOW_RESPONSE_TYPE, "stateval")
+	log.Printf("You likely need to reauthenticate here: %s", url.String())
 	log.Printf("Received following response from authorization endpoint:")
 	fmt.Printf("%s", respBodyPretty)
 	os.Exit(1)
