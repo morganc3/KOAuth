@@ -7,7 +7,7 @@ import (
 	"net/url"
 )
 
-func GetLocationHeader(resp *http.Response) string {
+func getLocationHeader(resp *http.Response) string {
 	return resp.Header.Get("Location")
 }
 

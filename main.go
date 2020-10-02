@@ -22,14 +22,7 @@ func main() {
 
 	// Perform normal implicit flow token exchange to validate session has been properly setup
 	if instance, ok := session.validateSession(); !ok {
-		respBodyPretty, err := httputil.DumpResponse(instance.AuthorizationRequest.Response, true)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("Could not perform normal implicit flow, cancelling scan")
-		log.Printf("Received following response from authorization endpoint:")
-		fmt.Printf("%s", respBodyPretty)
-		os.Exit(1)
+		exitWithAuthInfo(instance)
 	}
 
 	chk := NewCheck("redirect-uri-change", "high", "certain", IMPLICIT_FLOW_RESPONSE_TYPE, redirectURITotalChange)
@@ -37,6 +30,10 @@ func main() {
 	fmt.Println(chk.Pass)
 
 	chk = NewCheck("state-supported", "medium", "certain", AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, stateSupported)
+	chk.DoCheck()
+	fmt.Println(chk.Pass)
+
+	chk = NewCheck("pkce-supported", "medium", "certain", AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, stateSupported)
 	chk.DoCheck()
 	fmt.Println(chk.Pass)
 
@@ -54,4 +51,17 @@ func main() {
 	// ctx := context.Background()
 	// token, err := config.OAuthConfig.Exchange(ctx, authorizationCode)
 	// fmt.Println(token.AccessToken)
+}
+
+func exitWithAuthInfo(fi *FlowInstance) {
+	respBodyPretty, err := httputil.DumpResponse(fi.AuthorizationRequest.Response, true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Could not perform normal implicit flow, cancelling scan")
+	url := config.OAuthConfig.AuthCodeURL("stateval")
+	log.Printf("You likely need to reauthenticate here: %s", url)
+	log.Printf("Received following response from authorization endpoint:")
+	fmt.Printf("%s", respBodyPretty)
+	os.Exit(1)
 }
