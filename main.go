@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http/httputil"
@@ -12,13 +13,17 @@ var config KOAuthConfig
 var session KOAuthSession
 
 func main() {
-	config = NewConfig("config.json")
+	configFile := flag.String("config", "config.json", "config file name")
+	sessionFile := flag.String("session", "session.json", "session file name")
+	flag.Parse()
+
+	config = NewConfig(*configFile)
 
 	u, err := url.Parse(config.OAuthConfig.Endpoint.AuthURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	session = NewSession("session.json", u)
+	session = NewSession(*sessionFile, u)
 
 	// Perform normal implicit flow token exchange to validate session has been properly setup
 	if instance, ok := session.validateSession(); !ok {
