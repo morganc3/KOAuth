@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
+	"net/url"
 	"os"
 
 	"golang.org/x/oauth2"
@@ -53,14 +55,16 @@ func readOAuthConfig(oauthConfigFile string) oauth2.Config {
 	return *oauthConfig
 }
 
+func (c *KOAuthConfig) getConfigHost() string {
+	url, err := url.Parse(c.OAuthConfig.Endpoint.AuthURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return url.Host
+}
+
 func NewConfig(oauthConfigFile string) KOAuthConfig {
 	conf := new(KOAuthConfig)
 	conf.OAuthConfig = readOAuthConfig(oauthConfigFile)
 	return *conf
 }
-
-// func (k *KOAuthConfig) GenerateAuthorizationCodeURL(state string) string {
-// 	var authorizationCodeOption oauth2.AuthCodeOption = oauth2.SetAuthURLParam("response_type", "code")
-// 	authorizationCodeURL := k.OAuthConfig.AuthCodeURL(state, authorizationCodeOption)
-// 	return authorizationCodeURL
-// }

@@ -56,11 +56,13 @@ func (session *KOAuthSession) validateSession() (*FlowInstance, bool) {
 	implicitInstance := NewInstance(IMPLICIT_FLOW_RESPONSE_TYPE)
 	implicitInstance.DoAuthorizationRequest()
 
-	resp := implicitInstance.AuthorizationRequest.Response
-	ur := resp.Header.Get("Location")
+	resp := implicitInstance.AuthorizationResponse
 
+	ur := resp.URL
 	implicitAccessToken := getImplicitAccessTokenFromURL(ur)
+
 	ok := len(implicitAccessToken) > 0
+
 	return implicitInstance, ok
 }
 

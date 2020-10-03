@@ -63,8 +63,8 @@ func redirectURITotalChange(fi *FlowInstance) bool {
 	SetQueryParameter(fi.AuthorizationURL, REDIRECT_URI, newRedirectURI.String())
 	fi.DoAuthorizationRequest()
 
-	resp := fi.AuthorizationRequest.Response
-	redirectedTo, err := url.Parse(getLocationHeader(resp))
+	resp := fi.AuthorizationResponse
+	redirectedTo, err := url.Parse(resp.URL)
 	if err != nil {
 		// If we're not redirected at all, check definitely passes
 		return true
@@ -81,14 +81,16 @@ func redirectURITotalChange(fi *FlowInstance) bool {
 func stateSupported(fi *FlowInstance) bool {
 	// we send state by default
 	fi.DoAuthorizationRequest()
-	resp := fi.AuthorizationRequest.Response
-	redirectedTo, err := url.Parse(getLocationHeader(resp))
+	resp := fi.AuthorizationResponse
+	redirectedTo, err := url.Parse(resp.URL)
 	if err != nil {
 		// this would really be an error rather than a pass/fail TODO
 		log.Println(err)
 		return false
 	}
-	stateSent := GetQueryParameterFirst(fi.AuthorizationRequest.Request.URL, STATE)
+
+	requestUrl, _ := url.Parse(resp.URL)
+	stateSent := GetQueryParameterFirst(requestUrl, STATE)
 	stateReturned := GetQueryParameterFirst(redirectedTo, STATE)
 
 	return stateSent == stateReturned
@@ -105,8 +107,8 @@ func pkceSupported(fi *FlowInstance) bool {
 	SetQueryParameter(fi.AuthorizationURL, PKCE_CODE_CHALLENGE_METHOD, PKCE_S256)
 
 	fi.DoAuthorizationRequest()
-	resp := fi.AuthorizationRequest.Response
-	redirectedTo, err := url.Parse(getLocationHeader(resp))
+	resp := fi.AuthorizationResponse
+	redirectedTo, err := url.Parse(resp.URL)
 	if err != nil {
 		// this would really be an error rather than a pass/fail TODO
 		log.Println(err)

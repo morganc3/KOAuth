@@ -1,21 +1,43 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
-	"net/http/httputil"
 	"net/url"
 	"os"
+
+	"github.com/chromedp/chromedp"
 )
 
 var config KOAuthConfig
 var session KOAuthSession
+var chromeContext context.Context
 
 func main() {
 	configFile := flag.String("config", "config.json", "config file name")
 	sessionFile := flag.String("session", "session.json", "session file name")
+	proxy := flag.String("proxy", "", "HTTP Proxy <ip>:<port>")
 	flag.Parse()
+
+	var chromeOpts []chromedp.ExecAllocatorOption
+
+	headless := chromedp.Flag("headless", false)
+	chromeOpts = append(chromedp.DefaultExecAllocatorOptions[:], headless)
+
+	if *proxy != "" {
+		// Be sure you trust your proxy server if you choose this option
+		ignoreCerts := chromedp.Flag("ignore-certificate-errors", true)
+		chromeOpts = append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ProxyServer(*proxy),
+			ignoreCerts,
+		)
+	}
+
+	cx, cancel := chromedp.NewExecAllocator(context.Background(), chromeOpts...)
+	chromeContext = cx
+	defer cancel()
 
 	config = NewConfig(*configFile)
 
@@ -59,14 +81,8 @@ func main() {
 }
 
 func exitWithAuthInfo(fi *FlowInstance) {
-	respBodyPretty, err := httputil.DumpResponse(fi.AuthorizationRequest.Response, true)
-	if err != nil {
-		log.Fatal(err)
-	}
 	log.Printf("Could not perform normal implicit flow, cancelling scan")
 	url := fi.GenerateAuthorizationURL(IMPLICIT_FLOW_RESPONSE_TYPE, "stateval")
 	log.Printf("You likely need to reauthenticate here: %s", url.String())
-	log.Printf("Received following response from authorization endpoint:")
-	fmt.Printf("%s", respBodyPretty)
 	os.Exit(1)
 }

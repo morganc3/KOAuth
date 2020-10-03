@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/chromedp"
 	"golang.org/x/oauth2"
 )
 
@@ -19,16 +21,12 @@ const (
 const FLOW_ERROR = "ERROR"
 
 type FlowInstance struct {
-	Ctx                  context.Context
-	FlowType             FlowType
-	AuthorizationURL     *url.URL
-	AuthorizationRequest *AuthorizationRequest
-	ExchangeRequest      *ExchangeRequest
-}
-
-type AuthorizationRequest struct {
-	Request  *http.Request
-	Response *http.Response
+	Ctx                   context.Context
+	Cancel                context.CancelFunc
+	FlowType              FlowType
+	AuthorizationURL      *url.URL
+	AuthorizationResponse *network.Response
+	ExchangeRequest       *ExchangeRequest
 }
 
 type ExchangeRequest struct {
@@ -37,34 +35,35 @@ type ExchangeRequest struct {
 }
 
 func NewInstance(ft FlowType) *FlowInstance {
-	ctx := context.Background()
+	ctx, cancel := chromedp.NewContext(chromeContext)
 	flowInstance := FlowInstance{
-		Ctx:                  ctx,
-		FlowType:             ft,
-		AuthorizationRequest: new(AuthorizationRequest),
-		ExchangeRequest:      new(ExchangeRequest),
+		FlowType:              ft,
+		Ctx:                   ctx,
+		Cancel:                cancel,
+		AuthorizationResponse: new(network.Response),
+		ExchangeRequest:       new(ExchangeRequest),
 	}
 	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value")
 	return &flowInstance
 }
 
 func (i *FlowInstance) DoAuthorizationRequest() {
-	urlStr := i.AuthorizationURL.String()
-	req, err := http.NewRequest("GET", urlStr, nil)
+	defer i.Cancel()
+	var actions []chromedp.Action
+	actions = getHeaderAndCookieActions()
+
+	urlString := i.AuthorizationURL.String()
+
+	actions = append(actions, chromedp.Navigate(urlString))
+
+	resp, err := chromedp.RunResponse(i.Ctx, actions...)
+
 	if err != nil {
-		i.Ctx = context.WithValue(i.Ctx, FLOW_ERROR, err)
+		log.Println(err)
 		return
 	}
 
-	resp, err := session.Client.Do(req)
-
-	if err != nil {
-		i.Ctx = context.WithValue(i.Ctx, FLOW_ERROR, err)
-		return
-	}
-
-	i.AuthorizationRequest.Request = req
-	i.AuthorizationRequest.Response = resp
+	i.AuthorizationResponse = resp
 }
 
 func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state string) *url.URL {
@@ -74,6 +73,8 @@ func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state string)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// If supported, this will ensure that the authorization consent prompt only shows once
+	SetQueryParameter(URL, "prompt", "none")
 	return URL
 }
 

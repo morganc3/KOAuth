@@ -3,13 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"net/url"
 )
-
-func getLocationHeader(resp *http.Response) string {
-	return resp.Header.Get("Location")
-}
 
 // Sets value of the first key in the URL Query
 func SetQueryParameter(u *url.URL, key, value string) {
