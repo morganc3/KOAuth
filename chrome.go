@@ -20,7 +20,8 @@ func waitRedirectToHost(ctx context.Context, cancel context.CancelFunc, host str
 	chromedp.ListenTarget(ctx, func(ev interface{}) {
 		redirect, ok := ev.(*network.EventRequestWillBeSent)
 		if ok {
-			redirectURL, err := url.Parse(redirect.DocumentURL)
+			redirectURL, err := url.Parse(redirect.Request.URL)
+			redirectURL.Fragment = redirect.Request.URLFragment
 			if err != nil {
 				log.Fatal("Got bad redirectURL from EventRequestWillBeSent object")
 			}

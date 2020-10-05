@@ -3,6 +3,8 @@ OAuth 2.0 automated security scanner
 
 Work in progress!
 
+TODO: Support local storage / indexdb
+
 Usage:
 - Place cookies/headers for authentication in session.json
   - Cookies will automatically update as requests are sent

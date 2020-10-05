@@ -55,10 +55,11 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 
 	actions = append(actions, chromedp.Navigate(urlString))
 
+	// TODO - ADD TIMEOUT HERE
 	ch := waitRedirectToHost(i.Ctx, i.Cancel, config.getRedirectURIHost())
 	err := chromedp.Run(i.Ctx, actions...)
 	// TODO - fix hacky error check
-	if err.Error() == "context canceled" {
+	if err != nil && err.Error() == "context canceled" {
 		urlstr := <-ch
 		i.RedirectedToURL = urlstr
 		return nil
