@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"golang.org/x/oauth2"
 )
@@ -21,12 +20,12 @@ const (
 const FLOW_ERROR = "ERROR"
 
 type FlowInstance struct {
-	Ctx                   context.Context
-	Cancel                context.CancelFunc
-	FlowType              FlowType
-	AuthorizationURL      *url.URL
-	AuthorizationResponse *network.Response
-	ExchangeRequest       *ExchangeRequest
+	Ctx              context.Context
+	Cancel           context.CancelFunc
+	FlowType         FlowType
+	AuthorizationURL *url.URL
+	RedirectedToURL  *url.URL
+	ExchangeRequest  *ExchangeRequest
 }
 
 type ExchangeRequest struct {
@@ -37,17 +36,17 @@ type ExchangeRequest struct {
 func NewInstance(ft FlowType) *FlowInstance {
 	ctx, cancel := chromedp.NewContext(chromeContext)
 	flowInstance := FlowInstance{
-		FlowType:              ft,
-		Ctx:                   ctx,
-		Cancel:                cancel,
-		AuthorizationResponse: new(network.Response),
-		ExchangeRequest:       new(ExchangeRequest),
+		FlowType:        ft,
+		Ctx:             ctx,
+		Cancel:          cancel,
+		RedirectedToURL: new(url.URL),
+		ExchangeRequest: new(ExchangeRequest),
 	}
 	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value")
 	return &flowInstance
 }
 
-func (i *FlowInstance) DoAuthorizationRequest() {
+func (i *FlowInstance) DoAuthorizationRequest() error {
 	defer i.Cancel()
 	var actions []chromedp.Action
 	actions = getHeaderAndCookieActions()
@@ -56,14 +55,16 @@ func (i *FlowInstance) DoAuthorizationRequest() {
 
 	actions = append(actions, chromedp.Navigate(urlString))
 
-	resp, err := chromedp.RunResponse(i.Ctx, actions...)
-
-	if err != nil {
-		log.Println(err)
-		return
+	ch := waitRedirectToHost(i.Ctx, i.Cancel, config.getRedirectURIHost())
+	err := chromedp.Run(i.Ctx, actions...)
+	// TODO - fix hacky error check
+	if err.Error() == "context canceled" {
+		urlstr := <-ch
+		i.RedirectedToURL = urlstr
+		return nil
 	}
+	return err
 
-	i.AuthorizationResponse = resp
 }
 
 func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state string) *url.URL {

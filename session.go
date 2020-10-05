@@ -54,12 +54,14 @@ func readSessionInformation(sessionFile string) KOAuthSession {
 // Attempt normal implicit flow to see if we successfully get an Access Token back
 func (session *KOAuthSession) validateSession() (*FlowInstance, bool) {
 	implicitInstance := NewInstance(IMPLICIT_FLOW_RESPONSE_TYPE)
-	implicitInstance.DoAuthorizationRequest()
+	err := implicitInstance.DoAuthorizationRequest()
+	if err != nil {
+		log.Println(err)
+		return nil, false
+	}
 
-	resp := implicitInstance.AuthorizationResponse
-
-	ur := resp.URL
-	implicitAccessToken := getImplicitAccessTokenFromURL(ur)
+	ur := implicitInstance.RedirectedToURL
+	implicitAccessToken := getImplicitAccessTokenFromURL(ur.String())
 
 	ok := len(implicitAccessToken) > 0
 

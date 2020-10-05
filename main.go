@@ -83,6 +83,9 @@ func main() {
 func exitWithAuthInfo(fi *FlowInstance) {
 	log.Printf("Could not perform normal implicit flow, cancelling scan")
 	url := fi.GenerateAuthorizationURL(IMPLICIT_FLOW_RESPONSE_TYPE, "stateval")
+
+	// if it's our first time consenting, remove prompt=none
+	DelQueryParameter(url, "prompt")
 	log.Printf("You likely need to reauthenticate here: %s", url.String())
 	os.Exit(1)
 }

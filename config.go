@@ -55,12 +55,19 @@ func readOAuthConfig(oauthConfigFile string) oauth2.Config {
 	return *oauthConfig
 }
 
-func (c *KOAuthConfig) getConfigHost() string {
-	url, err := url.Parse(c.OAuthConfig.Endpoint.AuthURL)
+func getHost(urlStr string) string {
+	url, err := url.Parse(urlStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return url.Host
+}
+func (c *KOAuthConfig) getRedirectURIHost() string {
+	return getHost(c.OAuthConfig.RedirectURL)
+}
+
+func (c *KOAuthConfig) getConfigHost() string {
+	return getHost(c.OAuthConfig.Endpoint.AuthURL)
 }
 
 func NewConfig(oauthConfigFile string) KOAuthConfig {

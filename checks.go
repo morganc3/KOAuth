@@ -61,15 +61,14 @@ func redirectURITotalChange(fi *FlowInstance) bool {
 	newRedirectURI, _ := url.Parse("http://fakedomain123321.com/callback")
 
 	SetQueryParameter(fi.AuthorizationURL, REDIRECT_URI, newRedirectURI.String())
-	fi.DoAuthorizationRequest()
-
-	resp := fi.AuthorizationResponse
-	redirectedTo, err := url.Parse(resp.URL)
+	err := fi.DoAuthorizationRequest()
 	if err != nil {
+		// TODO better error checking
 		// If we're not redirected at all, check definitely passes
 		return true
 	}
 
+	redirectedTo := fi.RedirectedToURL
 	// if we are redirected to our malicious redirectURI,
 	// then the check failed
 	return redirectedTo.Host != newRedirectURI.Host
@@ -80,17 +79,15 @@ func redirectURITotalChange(fi *FlowInstance) bool {
 // ones like these should probably run for bth imlpicit and authz code ?
 func stateSupported(fi *FlowInstance) bool {
 	// we send state by default
-	fi.DoAuthorizationRequest()
-	resp := fi.AuthorizationResponse
-	redirectedTo, err := url.Parse(resp.URL)
+	err := fi.DoAuthorizationRequest()
 	if err != nil {
-		// this would really be an error rather than a pass/fail TODO
+		// TODO better error checking
 		log.Println(err)
 		return false
 	}
+	redirectedTo := fi.RedirectedToURL
 
-	requestUrl, _ := url.Parse(resp.URL)
-	stateSent := GetQueryParameterFirst(requestUrl, STATE)
+	stateSent := GetQueryParameterFirst(fi.AuthorizationURL, STATE)
 	stateReturned := GetQueryParameterFirst(redirectedTo, STATE)
 
 	return stateSent == stateReturned
@@ -106,14 +103,13 @@ func pkceSupported(fi *FlowInstance) bool {
 	SetQueryParameter(fi.AuthorizationURL, PKCE_CODE_CHALLENGE, pkceCodeChallenge)
 	SetQueryParameter(fi.AuthorizationURL, PKCE_CODE_CHALLENGE_METHOD, PKCE_S256)
 
-	fi.DoAuthorizationRequest()
-	resp := fi.AuthorizationResponse
-	redirectedTo, err := url.Parse(resp.URL)
+	err := fi.DoAuthorizationRequest()
 	if err != nil {
 		// this would really be an error rather than a pass/fail TODO
 		log.Println(err)
 		return false
 	}
+	redirectedTo := fi.RedirectedToURL
 
 	authorizationCode := GetQueryParameterFirst(redirectedTo, AUTHORIZATION_CODE)
 	opt := oauth2.SetAuthURLParam(PKCE_CODE_VERIFIER, string(data))
