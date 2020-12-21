@@ -1,0 +1,18 @@
+{
+  "name": "KOAuth",
+  "version": "0.1.0",
+  "author": "Colby Morgan",
+  "description": "KOAuth",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "jsonfile": "^6.1.0"
+  },
+  "devDependencies": {
+    "electron": "^11.1.0"
+  },
+  "keywords": [],
+  "license": "ISC"
+}

@@ -44,6 +44,7 @@ func DoChecks(checkList []*Check) {
 }
 
 // add new redirect URI param
+// change redirect uri protocol to http from https
 // change redirect URI entirely
 // change redirect URI subdomain
 // change redirect URI path
