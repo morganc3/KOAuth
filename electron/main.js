@@ -5,7 +5,8 @@ const file = '../config.json'
 var url = ""
 
 
-function readConfig() {
+function init() {
+    // read config and open browser
     jsonfile.readFile(file)
         .then(obj => createWindow(obj))
         .catch(error => console.error(error))
@@ -26,29 +27,39 @@ function generateAuthUrl(conf){
     return url;
 }
 
-function createWindow(obj){
-    url = generateAuthUrl(obj);
+function saveSessionAndExit(ses){
+    let cookies = ses.cookies;
+    cookies.get({ url: url }).then((cookies) => {
+        console.log(cookies)
+    }).catch((error) => {
+        console.log(error)
+    });
+    process.exit(1)
+}
+
+
+function createWindow(conf){
+    url = generateAuthUrl(conf);
     
     const win = new BrowserWindow({ width: 800, height: 600 })
-    win.loadURL(url)
+    win.loadURL(url,{userAgent: 'Chrome'})
 
     const ses = win.webContents.session
     ses.webRequest.onBeforeRequest((details, callback) => {
 	//console.log("Making request to "+details.url);
 	// figure out when we're getting sent to redirect uri and intercept
 	// then write cookies + local storage to session file
+	var currUrl = new URL(details.url);
+	var confUrl = new URL(conf.redirect_url);
+
+	if (currUrl.host + currUrl.path === confUrl.host + confUrl.path) {
+	    saveSessionAndExit(ses);
+	}
 	callback({ requestHeaders: details.requestHeaders})
     })
-
-    let cookies = ses.cookies;
-    cookies.get({ url: url }).then((cookies) => {
-	console.log(cookies)
-    }).catch((error) => {
-	console.log(error)
-    });
 }
 
-app.on("ready", readConfig);
+app.on("ready", init);
 
 app.on('window-all-closed', () => {
   app.quit()
