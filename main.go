@@ -23,7 +23,7 @@ func main() {
 
 	var chromeOpts []chromedp.ExecAllocatorOption
 
-	headless := chromedp.Flag("headless", false)
+	headless := chromedp.Flag("headless", true)
 	chromeOpts = append(chromedp.DefaultExecAllocatorOptions[:], headless)
 
 	if *proxy != "" {
@@ -56,6 +56,10 @@ func main() {
 	chk.DoCheck()
 	fmt.Println(chk.Pass)
 
+	chk = NewCheck("redirect-uri-scheme-downgrade", "high", "certain", IMPLICIT_FLOW_RESPONSE_TYPE, redirectURISchemeDowngrade)
+	chk.DoCheck()
+	fmt.Println(chk.Pass)
+
 	chk = NewCheck("state-supported", "medium", "certain", AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, stateSupported)
 	chk.DoCheck()
 	fmt.Println(chk.Pass)
@@ -63,21 +67,6 @@ func main() {
 	chk = NewCheck("pkce-supported", "medium", "certain", AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, pkceSupported)
 	chk.DoCheck()
 	fmt.Println(chk.Pass)
-
-	// authorizationCodeURL := config.GenerateAuthorizationCodeURL(state)
-
-	// req2, _ := http.NewRequest("GET", authorizationCodeURL, nil)
-	// session.setCookies(req2)
-	// resp2, err := httpClient.Do(req2)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// u2 := resp2.Header.Get("Location")
-	// authorizationCode := getAuthorizationCodeFromURL(u2)
-	// fmt.Println(authorizationCode)
-	// ctx := context.Background()
-	// token, err := config.OAuthConfig.Exchange(ctx, authorizationCode)
-	// fmt.Println(token.AccessToken)
 }
 
 func exitWithAuthInfo(fi *FlowInstance) {

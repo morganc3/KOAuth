@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"log"
@@ -9,7 +10,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type CheckFunction func(*FlowInstance) bool
+type CheckFunction func(*FlowInstance) (bool, error)
 
 type Check struct {
 	CheckName       string
@@ -31,10 +32,18 @@ func NewCheck(name, risk, confidence string, flowType FlowType, checkFunction Ch
 	return check
 }
 
-// TODO - check error in context here
 // Perform check, check returns bool for if it was passed
 func (c *Check) DoCheck() {
-	c.Pass = c.CheckFunc(c.FlowInstance)
+	pass, err := c.CheckFunc(c.FlowInstance)
+	c.Pass = pass
+	if err != nil {
+		switch err.Error() {
+		case CONTEXT_TIMEOUT_ERROR:
+			log.Printf("%s - Check timed out\n", c.CheckName)
+		default:
+			log.Printf("%s - %s\n", c.CheckName, err.Error())
+		}
+	}
 }
 
 func DoChecks(checkList []*Check) {
@@ -43,14 +52,16 @@ func DoChecks(checkList []*Check) {
 	}
 }
 
+// TODO checks:
+
 // add new redirect URI param
 // change redirect uri protocol to http from https
 // change redirect URI entirely
 // change redirect URI subdomain
 // change redirect URI path
+// check if redirect URI allows http at all, to begin with
 
 // iframes allowed at consent url
-
 // state not supported
 
 // pkce not supported
@@ -58,46 +69,53 @@ func DoChecks(checkList []*Check) {
 // pkce downgrade (stop using pkce at all)
 
 // Changes redirect URI, checks if we are still redirected
-func redirectURITotalChange(fi *FlowInstance) bool {
-	newRedirectURI, _ := url.Parse("http://fakedomain123321.com/callback")
-
-	SetQueryParameter(fi.AuthorizationURL, REDIRECT_URI, newRedirectURI.String())
+func redirectURICheck(fi *FlowInstance, redirectUri string) (bool, error) {
+	maliciousRedirectURI, _ := url.Parse(redirectUri)
+	SetQueryParameter(fi.AuthorizationURL, REDIRECT_URI, maliciousRedirectURI.String())
 	err := fi.DoAuthorizationRequest()
-	if err != nil {
-		// TODO better error checking
-		// If we're not redirected at all, check definitely passes
-		return true
-	}
 
 	redirectedTo := fi.RedirectedToURL
 	// if we are redirected to our malicious redirectURI,
 	// then the check failed
-	return redirectedTo.Host != newRedirectURI.Host
+	pass := redirectedTo.Host != maliciousRedirectURI.Host
+	return pass, err
 }
 
-// TODO - These checks need to have an error response value as well.
+// totally change redirect URI
+func redirectURITotalChange(fi *FlowInstance) (bool, error) {
+	return redirectURICheck(fi, "http://fakedomain123321.com/callback")
+}
+
+func redirectURISchemeDowngrade(fi *FlowInstance) (bool, error) {
+	uri, _ := url.Parse(config.OAuthConfig.RedirectURL)
+	if uri.Scheme == "https" {
+		uri.Scheme = "http"
+	} else {
+		return true, nil
+	}
+	uriStr := uri.String()
+
+	return redirectURICheck(fi, uriStr)
+}
+
 // checks if state is supported
 // ones like these should probably run for bth imlpicit and authz code ?
-func stateSupported(fi *FlowInstance) bool {
+func stateSupported(fi *FlowInstance) (bool, error) {
 	// we send state by default
 	err := fi.DoAuthorizationRequest()
-	if err != nil {
-		// TODO better error checking
-		log.Println(err)
-		return false
-	}
 	redirectedTo := fi.RedirectedToURL
 
 	stateSent := GetQueryParameterFirst(fi.AuthorizationURL, STATE)
 	stateReturned := GetQueryParameterFirst(redirectedTo, STATE)
 
-	return stateSent == stateReturned
+	pass := stateSent == stateReturned
+	return pass, err
 }
 
-// checks if state is supported
-func pkceSupported(fi *FlowInstance) bool {
+// checks if pkce is supported
+func pkceSupported(fi *FlowInstance) (bool, error) {
 	// TODO probably add helper function here to add pkce params
-	data := []byte("random-code-verifier-value!")
+	data := []byte("random-code-verifier-value-asdasdasdasd")
 	hash := sha256.Sum256(data)
 
 	pkceCodeChallenge := hex.EncodeToString(hash[:])
@@ -106,20 +124,21 @@ func pkceSupported(fi *FlowInstance) bool {
 
 	err := fi.DoAuthorizationRequest()
 	if err != nil {
-		// this would really be an error rather than a pass/fail TODO
-		log.Println(err)
-		return false
+		return false, err
 	}
 	redirectedTo := fi.RedirectedToURL
 
 	authorizationCode := GetQueryParameterFirst(redirectedTo, AUTHORIZATION_CODE)
 	opt := oauth2.SetAuthURLParam(PKCE_CODE_VERIFIER, string(data))
 	opt2 := oauth2.SetAuthURLParam(PKCE_CODE_CHALLENGE_METHOD, PKCE_S256)
-	tok, err := config.OAuthConfig.Exchange(fi.Ctx, authorizationCode, opt, opt2)
-
-	if err == nil && len(tok.AccessToken) > 0 {
-		return true
+	tok, err := config.OAuthConfig.Exchange(context.TODO(), authorizationCode, opt, opt2)
+	pass := false
+	if err != nil {
+		return pass, err
 	}
-	log.Println(err)
-	return false
+	if err == nil && len(tok.AccessToken) > 0 {
+		pass = true
+	}
+
+	return pass, err
 }

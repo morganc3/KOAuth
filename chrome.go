@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"time"
 
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
@@ -25,7 +26,7 @@ func waitRedirectToHost(ctx context.Context, cancel context.CancelFunc, host str
 			if err != nil {
 				log.Fatal("Got bad redirectURL from EventRequestWillBeSent object")
 			}
-			if redirectURL.Host == host {
+			if redirectURL.Host == host { // check host and path here?
 				select {
 				case <-ctx.Done():
 				case ch <- redirectURL:
@@ -36,6 +37,12 @@ func waitRedirectToHost(ctx context.Context, cancel context.CancelFunc, host str
 		}
 	})
 	return ch
+}
+
+func RunWithTimeOut(ctx *context.Context, timeout time.Duration, actions []chromedp.Action) error {
+	timeoutContext, cancel := context.WithTimeout(*ctx, timeout*time.Second)
+	defer cancel()
+	return chromedp.Run(timeoutContext, actions...)
 }
 
 func setChromeCookie(host string, c SessionCookie) chromedp.Action {
@@ -97,11 +104,10 @@ func setLocalStorageValues() []chromedp.Action {
 	return actions
 }
 
+// Returns actions that include setting local storage, cookie
+// values, etc.
 func getSessionActions() []chromedp.Action {
 	var actions []chromedp.Action
-
-	// change this to set localstorage
-	// actions = append(actions, setInitialChromeHeaders())
 
 	cookieActions := setInitialChromeCookies()
 	localStorageActions := setLocalStorageValues()

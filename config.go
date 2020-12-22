@@ -62,6 +62,7 @@ func getHost(urlStr string) string {
 	}
 	return url.Host
 }
+
 func (c *KOAuthConfig) getRedirectURIHost() string {
 	return getHost(c.OAuthConfig.RedirectURL)
 }
