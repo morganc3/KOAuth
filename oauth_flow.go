@@ -49,7 +49,7 @@ func NewInstance(ft FlowType) *FlowInstance {
 func (i *FlowInstance) DoAuthorizationRequest() error {
 	defer i.Cancel()
 	var actions []chromedp.Action
-	actions = getHeaderAndCookieActions()
+	actions = getSessionActions()
 
 	urlString := i.AuthorizationURL.String()
 

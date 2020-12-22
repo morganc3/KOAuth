@@ -6,6 +6,8 @@ const sessionFile = '../session.json'
 
 var url = ""
 
+// TODO: make configurable
+let clearCache = true
 
 function init() {
     // read config and open browser
@@ -59,23 +61,21 @@ function saveSessionAndExit(win, ses){
     // wait until promises are all resolved and write to session file
     Promise.all([promise1, promise2]).then(() => jsonfile.writeFile(sessionFile, sessionObject)
         .then(res => {
-            console.log("Wrote session information to " + sessionFile)
+            console.log("Wrote session information to " + sessionFile);
+            app.quit();
         })
         .catch(error => console.error(error)));
-    
-    
 }
-
 
 function createWindow(conf){
     url = generateAuthUrl(conf);
     
     const win = new BrowserWindow({ width: 800, height: 600 })
+    const ses = win.webContents.session
+
     win.loadURL(url,{userAgent: 'Chrome'})
 
-    const ses = win.webContents.session
     ses.webRequest.onBeforeRequest((details, callback) => {
-        //console.log("Making request to "+details.url);
         // figure out when we're getting sent to redirect uri and intercept
         // then write cookies + local storage to session file
         var currUrl = new URL(details.url);

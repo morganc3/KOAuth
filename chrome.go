@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"strings"
 
 	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 )
 
@@ -38,59 +38,81 @@ func waitRedirectToHost(ctx context.Context, cancel context.CancelFunc, host str
 	return ch
 }
 
-func setChromeCookie(name, value, domain string) chromedp.Action {
+func setChromeCookie(host string, c SessionCookie) chromedp.Action {
 	return chromedp.ActionFunc(func(ctx context.Context) error {
-		// Check if cookie needs to be secure (chromedp will error otherwise)
-		secure := strings.HasPrefix(name, "__Secure-")
-		success, err := network.SetCookie(name, value).
+		domain := host
+		if c.Domain != "" {
+			domain = c.Domain
+		}
+		path := "/"
+		if c.Path != "" {
+			path = c.Path
+		}
+
+		success, err := network.SetCookie(c.Name, c.Value).
 			WithDomain(domain).
-			WithPath("/").
-			WithSecure(secure).
+			WithPath(path).
+			WithSecure(c.Secure).
+			WithHTTPOnly(c.HttpOnly).
 			Do(ctx)
 		if err != nil {
 			return err
 		}
 		if !success {
-			return fmt.Errorf("could not set cookie %s", name)
+			return fmt.Errorf("could not set cookie %s", c.Name)
 		}
 		return nil
 	})
 }
 
 func setInitialChromeCookies() []chromedp.Action {
-	actions := make([]chromedp.Action, len(session.InitialCookies))
+	actions := make([]chromedp.Action, len(session.Cookies))
 
 	host := config.getConfigHost()
 	cnt := 0
-	for name, val := range session.InitialCookies {
-		actions[cnt] = setChromeCookie(name, val, host)
+	for _, c := range session.Cookies {
+		actions[cnt] = setChromeCookie(host, c)
 		cnt++
 	}
 
 	return actions
 }
 
-func setChromeHeaders(headers map[string]interface{}) chromedp.Action {
-	return chromedp.ActionFunc(func(ctx context.Context) error {
-		return network.SetExtraHTTPHeaders(network.Headers(headers)).Do(ctx)
-	})
-}
-
-func setInitialChromeHeaders() chromedp.Action {
-	headers := make(map[string]interface{}, len(session.InitialHeaders))
-	for name, val := range session.InitialHeaders {
-		headers[name] = val
-	}
-	return setChromeHeaders(headers)
-}
-
-func getHeaderAndCookieActions() []chromedp.Action {
+func setLocalStorageValues() []chromedp.Action {
 	var actions []chromedp.Action
-	actions = append(actions, setInitialChromeHeaders())
+	for _, item := range session.LocalStorage {
+		action := chromedp.ActionFunc(func(ctx context.Context) error {
+			javaScriptString := fmt.Sprintf("window.localStorage.setItem('%s', '%s')", item.Name, item.Value)
+			_, exp, err := runtime.Evaluate(javaScriptString).Do(ctx)
+			if err != nil {
+				return err
+			}
+			if exp != nil {
+				return exp
+			}
+			return nil
+		})
+		actions = append(actions, action)
+	}
+	return actions
+}
+
+func getSessionActions() []chromedp.Action {
+	var actions []chromedp.Action
+
+	// change this to set localstorage
+	// actions = append(actions, setInitialChromeHeaders())
 
 	cookieActions := setInitialChromeCookies()
+	localStorageActions := setLocalStorageValues()
+
 	for _, c := range cookieActions {
 		actions = append(actions, c)
 	}
+
+	for _, ls := range localStorageActions {
+		actions = append(actions, ls)
+	}
+
 	return actions
 }
