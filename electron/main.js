@@ -1,13 +1,15 @@
 const { app, BrowserWindow } = require('electron')
 const jsonfile = require('jsonfile')
-const file = '../config.json'
+
+const configFile = '../config.json'
+const sessionFile = '../session.json'
 
 var url = ""
 
 
 function init() {
     // read config and open browser
-    jsonfile.readFile(file)
+    jsonfile.readFile(configFile)
         .then(obj => createWindow(obj))
         .catch(error => console.error(error))
 }
@@ -27,14 +29,41 @@ function generateAuthUrl(conf){
     return url;
 }
 
-function saveSessionAndExit(ses){
+// write cookies and local storage to session file
+// TODO: Add support for indexedDB, etc
+function saveSessionAndExit(win, ses){
     let cookies = ses.cookies;
-    cookies.get({ url: url }).then((cookies) => {
-        console.log(cookies)
+
+    let sessionObject = {}
+
+    // get cookies
+    let promise1 = cookies.get({ url: url }).then((cookies) => {
+        sessionObject.cookies = cookies;
     }).catch((error) => {
         console.log(error)
     });
-    process.exit(1)
+
+    // Get localstorage
+    let promise2 = win.webContents.executeJavaScript(`
+        let localStorageArr = []; 
+        let localStorageKeys = Object.keys(localStorage); 
+        localStorageKeys.forEach((item) => localStorageArr.push({"name":item, "value":localStorage.getItem(item)}));
+        Promise.resolve(localStorageArr)`, 
+        true)
+        .then((result) => {
+            sessionObject.localStorage = result;
+        }).catch((error) => {
+            console.log(error)
+        });
+
+    // wait until promises are all resolved and write to session file
+    Promise.all([promise1, promise2]).then(() => jsonfile.writeFile(sessionFile, sessionObject)
+        .then(res => {
+            console.log("Wrote session information to " + sessionFile)
+        })
+        .catch(error => console.error(error)));
+    
+    
 }
 
 
@@ -46,16 +75,16 @@ function createWindow(conf){
 
     const ses = win.webContents.session
     ses.webRequest.onBeforeRequest((details, callback) => {
-	//console.log("Making request to "+details.url);
-	// figure out when we're getting sent to redirect uri and intercept
-	// then write cookies + local storage to session file
-	var currUrl = new URL(details.url);
-	var confUrl = new URL(conf.redirect_url);
+        //console.log("Making request to "+details.url);
+        // figure out when we're getting sent to redirect uri and intercept
+        // then write cookies + local storage to session file
+        var currUrl = new URL(details.url);
+        var confUrl = new URL(conf.redirect_url);
 
-	if (currUrl.host + currUrl.path === confUrl.host + confUrl.path) {
-	    saveSessionAndExit(ses);
-	}
-	callback({ requestHeaders: details.requestHeaders})
+        if (currUrl.host + currUrl.path === confUrl.host + confUrl.path) {
+            saveSessionAndExit(win, ses);
+        }
+        callback({ requestHeaders: details.requestHeaders})
     })
 }
 
