@@ -1,4 +1,4 @@
-package main
+package oauth
 
 // OAuth 2.0 HTTP parameter constants
 const (

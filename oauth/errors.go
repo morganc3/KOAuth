@@ -1,4 +1,4 @@
-package main
+package oauth
 
 const (
 	CONTEXT_TIMEOUT_ERROR   = "context deadline exceeded"

@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"encoding/json"
@@ -9,6 +9,8 @@ import (
 
 	"golang.org/x/oauth2"
 )
+
+var Config KOAuthConfig
 
 type EndpointWrapper struct {
 	AuthURL  string `json:"auth_url"`
@@ -63,11 +65,11 @@ func getHost(urlStr string) string {
 	return url.Host
 }
 
-func (c *KOAuthConfig) getRedirectURIHost() string {
+func (c *KOAuthConfig) GetRedirectURIHost() string {
 	return getHost(c.OAuthConfig.RedirectURL)
 }
 
-func (c *KOAuthConfig) getConfigHost() string {
+func (c *KOAuthConfig) GetConfigHost() string {
 	return getHost(c.OAuthConfig.Endpoint.AuthURL)
 }
 

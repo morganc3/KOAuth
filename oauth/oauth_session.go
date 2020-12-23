@@ -1,4 +1,4 @@
-package main
+package oauth
 
 import (
 	"encoding/json"
@@ -9,20 +9,7 @@ import (
 	"os"
 )
 
-// Electron Cookie format
-type SessionCookie struct {
-	Name     string `json:"name"`
-	Value    string `json:"value"`
-	Domain   string `json:"domain,omitempty"`
-	Path     string `json:"path,omitempty"`
-	Secure   bool   `json:"secure,omitempty"`
-	HttpOnly bool   `json:"httpOnly,omitempty"`
-}
-
-type LocalStorageItem struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
+var Session KOAuthSession
 
 type KOAuthSession struct {
 	Cookies      []SessionCookie    `json:"cookies"`
@@ -51,7 +38,7 @@ func readSessionInformation(sessionFile string) KOAuthSession {
 
 // TODO - this should check both authz code flow and implicit flow
 // Attempt normal implicit flow to see if we successfully get an Access Token back
-func (session *KOAuthSession) validateSession() (*FlowInstance, bool) {
+func (session *KOAuthSession) ValidateSession() (*FlowInstance, bool) {
 	implicitInstance := NewInstance(IMPLICIT_FLOW_RESPONSE_TYPE)
 	err := implicitInstance.DoAuthorizationRequest()
 	if err != nil {
@@ -60,7 +47,7 @@ func (session *KOAuthSession) validateSession() (*FlowInstance, bool) {
 	}
 
 	ur := implicitInstance.RedirectedToURL
-	implicitAccessToken := getImplicitAccessTokenFromURL(ur.String())
+	implicitAccessToken := GetImplicitAccessTokenFromURL(ur.String())
 
 	ok := len(implicitAccessToken) > 0
 

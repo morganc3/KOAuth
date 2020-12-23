@@ -1,4 +1,4 @@
-package main
+package oauth
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
+	"github.com/morganc3/KOAuth/config"
 )
 
 // Wait until we get a redirect to a URL that contains our redirect URI's host
@@ -73,11 +74,11 @@ func setChromeCookie(host string, c SessionCookie) chromedp.Action {
 }
 
 func setInitialChromeCookies() []chromedp.Action {
-	actions := make([]chromedp.Action, len(session.Cookies))
+	actions := make([]chromedp.Action, len(Session.Cookies))
 
-	host := config.getConfigHost()
+	host := config.Config.GetConfigHost()
 	cnt := 0
-	for _, c := range session.Cookies {
+	for _, c := range Session.Cookies {
 		actions[cnt] = setChromeCookie(host, c)
 		cnt++
 	}
@@ -87,7 +88,7 @@ func setInitialChromeCookies() []chromedp.Action {
 
 func setLocalStorageValues() []chromedp.Action {
 	var actions []chromedp.Action
-	for _, item := range session.LocalStorage {
+	for _, item := range Session.LocalStorage {
 		action := chromedp.ActionFunc(func(ctx context.Context) error {
 			javaScriptString := fmt.Sprintf("window.localStorage.setItem('%s', '%s')", item.Name, item.Value)
 			_, exp, err := runtime.Evaluate(javaScriptString).Do(ctx)
