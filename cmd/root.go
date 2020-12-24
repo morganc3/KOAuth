@@ -16,6 +16,8 @@ import (
 func Execute() {
 	configFile := flag.String("config", "config.json", "config file name")
 	sessionFile := flag.String("session", "session.json", "session file name")
+	checkFile := flag.String("checks", "./resources/checks.json", "checks file name")
+	outFile := flag.String("outfile", "output.json", "results output file")
 	proxy := flag.String("proxy", "", "HTTP Proxy <ip>:<port>")
 	flag.Parse()
 
@@ -50,11 +52,10 @@ func Execute() {
 		exitWithAuthInfo(instance)
 	}
 
-	// TODO: make checkfile CLI option
-	checks.Init("./resources/checks.json")
+	checks.Init(*checkFile)
 	checks.DoChecks()
 	checks.PrintResults()
-	checks.WriteResults("./output.json")
+	checks.WriteResults(*outFile)
 }
 
 func exitWithAuthInfo(fi *oauth.FlowInstance) {
