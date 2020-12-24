@@ -17,17 +17,21 @@ import (
 // There is no easy way to do this with the chromedp API's, so we literally
 // watch events until we get one that is a EventRequestWillBeSent type with
 // a URL of our redirectURI
-func waitRedirectToHost(ctx context.Context, cancel context.CancelFunc, host string) <-chan *url.URL {
+func waitRedirect(ctx context.Context, cancel context.CancelFunc, host, path string) <-chan *url.URL {
 	ch := make(chan *url.URL, 1)
 	chromedp.ListenTarget(ctx, func(ev interface{}) {
 		redirect, ok := ev.(*network.EventRequestWillBeSent)
 		if ok {
 			redirectURL, err := url.Parse(redirect.Request.URL)
-			redirectURL.Fragment = redirect.Request.URLFragment
+			if len(redirect.Request.URLFragment) > 0 {
+				redirectURL.Fragment = redirect.Request.URLFragment[1:] // remove '#'
+			}
 			if err != nil {
 				log.Fatal("Got bad redirectURL from EventRequestWillBeSent object")
 			}
-			if redirectURL.Host == host { // check host and path here?
+
+			// if we are being redirected to the provided redirectURL
+			if redirectURL.Host == host && redirectURL.Path == path {
 				select {
 				case <-ctx.Done():
 				case ch <- redirectURL:

@@ -1,15 +1,13 @@
 package checks
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
-	"net/url"
+	"os"
 
-	"github.com/morganc3/KOAuth/config"
 	"github.com/morganc3/KOAuth/oauth"
-	"golang.org/x/oauth2"
 )
 
 type CheckFunction func(*oauth.FlowInstance) (State, error)
@@ -24,24 +22,68 @@ const (
 	SKIP State = "SKIP" // Skipped for some reason
 )
 
-type Check struct {
-	CheckName       string
-	RiskRating      string
-	ConfidenceLevel string
-	FlowInstance    *oauth.FlowInstance
-	CheckFunc       CheckFunction
-	State
+var ChecksList []*Check
+
+type ChecksIn struct {
+	Checks []Check `json:"checks"`
 }
 
-func NewCheck(name, risk, confidence string, flowType oauth.FlowType, checkFunction CheckFunction) *Check {
-	check := &Check{
-		CheckName:       name,
-		RiskRating:      risk,
-		ConfidenceLevel: confidence,
-		CheckFunc:       checkFunction,
+type Check struct {
+	CheckName    string              `json:"name"`
+	RiskRating   string              `json:"risk"`
+	Description  string              `json:"description"`
+	SkipReason   string              `json:"skipReason,omitempty"`
+	FlowType     string              `json:"flowType"`
+	References   string              `json:"references,omitempty"`
+	FlowInstance *oauth.FlowInstance `json:"-"`
+	CheckFunc    CheckFunction       `json:"-"`
+
+	// Output message giving information about why the check failed
+	FailMessage string `json:"-"`
+
+	// Output message giving information about an error that occurred during
+	// the check
+	ErrorMessage string `json:"-"`
+
+	// State contains result of the check
+	State `json:"-"`
+}
+
+func Init(checkJSONFile string) {
+	Mappings = getMappings()
+	// read checkJSONfile and marshal
+	jsonFile, err := os.Open(checkJSONFile)
+	if err != nil {
+		log.Fatal("Error opening checks JSON file")
 	}
-	check.FlowInstance = oauth.NewInstance(flowType)
-	return check
+	defer jsonFile.Close()
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		log.Fatal("Error reading checks JSON file")
+	}
+	var checks ChecksIn
+	err = json.Unmarshal(byteValue, &checks)
+	if err != nil {
+		log.Fatal("Error unmarshalling check JSON file")
+	}
+
+	for i, c := range checks.Checks {
+		checks.Checks[i].CheckFunc = getMapping(c.CheckName)
+		var responseType oauth.FlowType
+		switch c.FlowType {
+		case "authorization-code":
+			responseType = oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
+		case "implicit":
+			responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
+		default:
+			log.Fatalf("Invalid flow type given for check %s", c.CheckName)
+		}
+		checks.Checks[i].FlowInstance = oauth.NewInstance(responseType)
+
+		// append pointer to the check to our list
+		ChecksList = append(ChecksList, &checks.Checks[i])
+	}
+
 }
 
 // Perform check, check returns bool for if it was passed
@@ -49,18 +91,29 @@ func (c *Check) DoCheck() {
 	state, err := c.CheckFunc(c.FlowInstance)
 	c.State = state
 	if err != nil {
-		switch err.Error() {
-		case oauth.CONTEXT_TIMEOUT_ERROR:
-			log.Printf("%s - Check timed out\n", c.CheckName)
-		default:
-			log.Printf("%s - %s\n", c.CheckName, err.Error())
-		}
+		// switch err.Error() {
+		// case oauth.CONTEXT_TIMEOUT_ERROR:
+		// 	log.Printf("%s - Check timed out\n", c.CheckName)
+		// default:
+		// 	log.Printf("%s - %s\n", c.CheckName, err.Error())
+		// }
+		c.ErrorMessage = err.Error()
 	}
 }
 
-func DoChecks(checkList []*Check) {
-	for _, c := range checkList {
+func DoChecks() {
+	for _, c := range ChecksList {
 		c.DoCheck()
+	}
+}
+
+func GetResults() {
+	for _, c := range ChecksList {
+		fmt.Println(c.CheckName, c.State)
+		if c.State == WARN {
+			fmt.Println("\t", c.ErrorMessage)
+		}
+		fmt.Println("")
 	}
 }
 
@@ -72,94 +125,14 @@ func DoChecks(checkList []*Check) {
 // change redirect URI subdomain
 // change redirect URI path
 // check if redirect URI allows http at all, to begin with
+// multiple redirect uri's
 
 // iframes allowed at consent url
 // state not supported
 
-// pkce not supported
 // pkce downgrade sha256 -> plain
 // pkce downgrade (stop using pkce at all)
 
+// client secret not required
+
 // Changes redirect URI, checks if we are still redirected
-func RedirectURICheck(fi *oauth.FlowInstance, redirectUri string) (State, error) {
-	maliciousRedirectURI, _ := url.Parse(redirectUri)
-	oauth.SetQueryParameter(fi.AuthorizationURL, oauth.REDIRECT_URI, maliciousRedirectURI.String())
-	err := fi.DoAuthorizationRequest()
-	if err != nil {
-		return WARN, err
-	}
-
-	redirectedTo := fi.RedirectedToURL
-	// if we are redirected to our malicious redirectURI,
-	// then the check failed
-	if redirectedTo.Host != maliciousRedirectURI.Host {
-		return PASS, nil
-	}
-	return FAIL, err
-}
-
-// totally change redirect URI
-func RedirectURITotalChange(fi *oauth.FlowInstance) (State, error) {
-	return RedirectURICheck(fi, "http://fakedomain123321.com/callback")
-}
-
-func RedirectURISchemeDowngrade(fi *oauth.FlowInstance) (State, error) {
-	uri, _ := url.Parse(config.Config.OAuthConfig.RedirectURL)
-	if uri.Scheme == "https" {
-		uri.Scheme = "http"
-	} else {
-		return INFO, nil
-	}
-	uriStr := uri.String()
-
-	return RedirectURICheck(fi, uriStr)
-}
-
-// checks if state is supported
-// ones like these should probably run for bth imlpicit and authz code ?
-func StateSupported(fi *oauth.FlowInstance) (State, error) {
-	// we send state by default
-	err := fi.DoAuthorizationRequest()
-	if err != nil {
-		return WARN, err
-	}
-	redirectedTo := fi.RedirectedToURL
-
-	stateSent := oauth.GetQueryParameterFirst(fi.AuthorizationURL, oauth.STATE)
-	stateReturned := oauth.GetQueryParameterFirst(redirectedTo, oauth.STATE)
-
-	if stateSent == stateReturned {
-		return PASS, nil
-	}
-	return FAIL, err
-}
-
-// checks if pkce is supported
-func PkceSupported(fi *oauth.FlowInstance) (State, error) {
-	// TODO probably add helper function here to add pkce params
-	data := []byte("random-code-verifier-value-asdasdasdasd")
-	hash := sha256.Sum256(data)
-
-	pkceCodeChallenge := hex.EncodeToString(hash[:])
-	oauth.SetQueryParameter(fi.AuthorizationURL, oauth.PKCE_CODE_CHALLENGE, pkceCodeChallenge)
-	oauth.SetQueryParameter(fi.AuthorizationURL, oauth.PKCE_CODE_CHALLENGE_METHOD, oauth.PKCE_S256)
-
-	err := fi.DoAuthorizationRequest()
-	if err != nil {
-		return WARN, err
-	}
-	redirectedTo := fi.RedirectedToURL
-
-	authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE)
-	opt := oauth2.SetAuthURLParam(oauth.PKCE_CODE_VERIFIER, string(data))
-	opt2 := oauth2.SetAuthURLParam(oauth.PKCE_CODE_CHALLENGE_METHOD, oauth.PKCE_S256)
-	tok, err := config.Config.OAuthConfig.Exchange(context.TODO(), authorizationCode, opt, opt2)
-	if err != nil {
-		return WARN, err
-	}
-	if err == nil && len(tok.AccessToken) > 0 {
-		return PASS, nil
-	}
-
-	return FAIL, err
-}

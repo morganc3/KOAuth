@@ -20,13 +20,14 @@ const (
 )
 
 type FlowInstance struct {
-	Ctx                context.Context
-	Cancel             context.CancelFunc
-	FlowType           FlowType
-	FlowTimeoutSeconds time.Duration
-	AuthorizationURL   *url.URL
-	RedirectedToURL    *url.URL
-	ExchangeRequest    *ExchangeRequest
+	Ctx                 context.Context
+	Cancel              context.CancelFunc
+	FlowType            FlowType
+	FlowTimeoutSeconds  time.Duration
+	AuthorizationURL    *url.URL
+	ProvidedRedirectURL *url.URL
+	RedirectedToURL     *url.URL
+	ExchangeRequest     *ExchangeRequest
 }
 
 type ExchangeRequest struct {
@@ -46,13 +47,18 @@ const FLOW_TIMEOUT_SECONDS = 5
 
 func NewInstance(ft FlowType) *FlowInstance {
 	ctx, cancel := chromedp.NewContext(ChromeContext)
+	redirectUri, err := url.Parse(config.Config.OAuthConfig.RedirectURL)
+	if err != nil {
+		log.Fatalf("Failed to parse provided redirect_uri in config file")
+	}
 	flowInstance := FlowInstance{
-		FlowType:           ft,
-		Ctx:                ctx,
-		Cancel:             cancel,
-		FlowTimeoutSeconds: FLOW_TIMEOUT_SECONDS,
-		RedirectedToURL:    new(url.URL),
-		ExchangeRequest:    new(ExchangeRequest),
+		FlowType:            ft,
+		Ctx:                 ctx,
+		Cancel:              cancel,
+		FlowTimeoutSeconds:  FLOW_TIMEOUT_SECONDS,
+		ProvidedRedirectURL: redirectUri,
+		RedirectedToURL:     new(url.URL),
+		ExchangeRequest:     new(ExchangeRequest),
 	}
 	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value")
 	return &flowInstance
@@ -69,7 +75,7 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 
 	// adds listener which will cancel the context
 	// if a redirect to redirect_uri occurs
-	ch := waitRedirectToHost(i.Ctx, i.Cancel, config.Config.GetRedirectURIHost())
+	ch := waitRedirect(i.Ctx, i.Cancel, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
 	err := RunWithTimeOut(&i.Ctx, i.FlowTimeoutSeconds, actions)
 
 	// Error caused by context being cancelled when

@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -51,21 +50,10 @@ func Execute() {
 		exitWithAuthInfo(instance)
 	}
 
-	chk := checks.NewCheck("redirect-uri-change", "high", "certain", oauth.IMPLICIT_FLOW_RESPONSE_TYPE, checks.RedirectURITotalChange)
-	chk.DoCheck()
-	fmt.Println(chk.State)
-
-	chk = checks.NewCheck("redirect-uri-scheme-downgrade", "high", "certain", oauth.IMPLICIT_FLOW_RESPONSE_TYPE, checks.RedirectURISchemeDowngrade)
-	chk.DoCheck()
-	fmt.Println(chk.State)
-
-	chk = checks.NewCheck("state-supported", "medium", "certain", oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, checks.StateSupported)
-	chk.DoCheck()
-	fmt.Println(chk.State)
-
-	chk = checks.NewCheck("pkce-supported", "medium", "certain", oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, checks.PkceSupported)
-	chk.DoCheck()
-	fmt.Println(chk.State)
+	// TODO: make checkfile CLI option
+	checks.Init("./resources/checks.json")
+	checks.DoChecks()
+	checks.GetResults()
 }
 
 func exitWithAuthInfo(fi *oauth.FlowInstance) {

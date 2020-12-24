@@ -1,0 +1,33 @@
+{
+    "checks": [
+        {
+            "name":"redirect-uri-total-change",
+            "risk":"high",
+            "description":"Completely alters the redirect URI",
+            "flowType":"implicit",
+            "references":""
+        },
+        {
+            "name":"redirect-uri-scheme-downgrade",
+            "risk":"high",
+            "description":"Downgrades scheme of redirect URI from HTTPS to HTTP",
+            "skipReason":"This check was skipped because the proper redirect URI did not use the HTTPS scheme",
+            "flowType":"implicit",
+            "references":""
+        },
+        {
+            "name":"state-supported",
+            "risk":"medium",
+            "description":"Check if the OAuth state parameter is supported",
+            "flowType":"authorization-code",
+            "references":""
+        },
+        {
+            "name":"pkce-supported",
+            "risk":"medium",
+            "description":"Checks if PKCE is supported",
+            "flowType":"authorization-code",
+            "references":""
+        }
+    ]
+}
