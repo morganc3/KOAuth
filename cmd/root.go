@@ -54,6 +54,7 @@ func Execute() {
 	checks.Init("./resources/checks.json")
 	checks.DoChecks()
 	checks.PrintResults()
+	checks.WriteResults("./output.json")
 }
 
 func exitWithAuthInfo(fi *oauth.FlowInstance) {

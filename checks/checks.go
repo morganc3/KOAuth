@@ -101,7 +101,51 @@ func DoChecks() {
 	}
 }
 
-func GetResults() {
+// Write Check results in JSON format to file
+func WriteResults(outfile string) {
+
+	type CheckOut struct {
+		CheckName    string `json:"name"`
+		RiskRating   string `json:"risk"`
+		Description  string `json:"description"`
+		SkipReason   string `json:"skipReason,omitempty"`
+		References   string `json:"references,omitempty"`
+		FailMessage  string `json:"failMessage,omitempty"`
+		ErrorMessage string `json:"errorMessage,omitempty"`
+		State        `json:"state"`
+	}
+
+	var outList []CheckOut
+	for _, c := range ChecksList {
+		// only want to output some fields, so
+		// marhsal Check struct to bytes, then unmarshal it back to tmp struct
+		// then marshal to bytes and write to file
+
+		var outCheck CheckOut
+		bslice, err := json.Marshal(c)
+		if err != nil {
+			log.Fatalf("Could not Marshal to JSON for Check %s\n", c.CheckName)
+		}
+
+		err = json.Unmarshal(bslice, &outCheck)
+		if err != nil {
+			log.Fatalf("Could not Unmarshal to JSON to output format for  %s\n", c.CheckName)
+		}
+		outCheck.State = c.State
+		outList = append(outList, outCheck)
+	}
+
+	bslice, err := json.Marshal(outList)
+	err = ioutil.WriteFile(outfile, bslice, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Output has been saved to %s\n", outfile)
+}
+
+// print Check results nicely to console
+func PrintResults() {
 	for _, c := range ChecksList {
 		fmt.Println(c.CheckName, c.State)
 		if c.State == WARN {
