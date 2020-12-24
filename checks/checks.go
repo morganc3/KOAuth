@@ -91,12 +91,6 @@ func (c *Check) DoCheck() {
 	state, err := c.CheckFunc(c.FlowInstance)
 	c.State = state
 	if err != nil {
-		// switch err.Error() {
-		// case oauth.CONTEXT_TIMEOUT_ERROR:
-		// 	log.Printf("%s - Check timed out\n", c.CheckName)
-		// default:
-		// 	log.Printf("%s - %s\n", c.CheckName, err.Error())
-		// }
 		c.ErrorMessage = err.Error()
 	}
 }
