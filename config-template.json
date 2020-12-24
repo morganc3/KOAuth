@@ -1,0 +1,10 @@
+{
+  "redirect_url": "https://example.com/callback",
+  "client_id": "12838298jdfusj87h38278",
+  "client_secret": "asdjasd8asj8asdj",
+  "scopes":["profile", "email"],
+  "endpoint": {
+      "auth_url": "https://accounts.google.com/o/oauth2/auth",
+      "token_url": "https://oauth2.googleapis.com/token"
+  }
+}

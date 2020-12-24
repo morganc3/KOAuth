@@ -53,7 +53,7 @@ func Execute() {
 	// TODO: make checkfile CLI option
 	checks.Init("./resources/checks.json")
 	checks.DoChecks()
-	checks.GetResults()
+	checks.PrintResults()
 }
 
 func exitWithAuthInfo(fi *oauth.FlowInstance) {
