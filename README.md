@@ -19,4 +19,4 @@ Usage:
 - `go build`
 - `./KOAuth --config configfile.json`
 
-./KOAuth --config config_discord.json --session session_discord.json
+`./KOAuth --config config_discord.json --session session_discord.json`
