@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -89,7 +88,6 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 		return err
 	case urlstr := <-ch:
 		i.RedirectedToURL = urlstr
-		fmt.Println(urlstr)
 		err = i.GetURLError() // get error as defined in rfc6749
 		if err != nil {
 			return err

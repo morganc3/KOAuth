@@ -3,7 +3,8 @@ package checks
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
+	b64 "encoding/base64"
+	"fmt"
 
 	"github.com/morganc3/KOAuth/config"
 	"github.com/morganc3/KOAuth/oauth"
@@ -13,10 +14,13 @@ import (
 // checks if pkce is supported
 func PkceSupported(fi *oauth.FlowInstance) (State, error) {
 	// TODO probably add helper function here to add pkce params
-	data := []byte("random-code-verifier-value-asdasdasdasd")
+	data := []byte("random-code-verifier-value-012939123891238912398123")
 	hash := sha256.Sum256(data)
+	hashb64 := b64.URLEncoding.EncodeToString(hash[:])
 
-	pkceCodeChallenge := hex.EncodeToString(hash[:])
+	pkceCodeChallenge := hashb64
+	fmt.Println(pkceCodeChallenge)
+	fmt.Println(oauth.PKCE_S256)
 	oauth.SetQueryParameter(fi.AuthorizationURL, oauth.PKCE_CODE_CHALLENGE, pkceCodeChallenge)
 	oauth.SetQueryParameter(fi.AuthorizationURL, oauth.PKCE_CODE_CHALLENGE_METHOD, oauth.PKCE_S256)
 

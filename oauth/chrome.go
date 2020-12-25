@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/url"
 	"time"
@@ -30,7 +29,6 @@ func WaitRedirect(ctx context.Context, host, path string) <-chan *url.URL {
 
 			// if we are being redirected to the provided redirectURL
 			if redirectURL.Host == host && redirectURL.Path == path {
-				fmt.Println("HERE WHERE WE HAVE " + redirectURL.String())
 				select {
 				case <-ctx.Done():
 					return

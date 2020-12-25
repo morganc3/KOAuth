@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/chromedp/chromedp"
@@ -32,7 +31,6 @@ func initSession() (context.Context, context.CancelFunc) {
 
 	select {
 	case <-ctx.Done():
-		fmt.Println("this one?")
 		log.Fatal("Context was cancelled")
 	case urlstr := <-ch:
 		i.RedirectedToURL = urlstr
