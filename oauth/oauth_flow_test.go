@@ -1,14 +1,17 @@
 package oauth
 
 import (
+	"context"
 	"net/url"
 	"testing"
 
+	"github.com/chromedp/chromedp"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestURLFunctions(t *testing.T) {
-	flow := NewInstance(IMPLICIT_FLOW_RESPONSE_TYPE)
+	ctx, cancel := chromedp.NewContext(context.Background())
+	flow := NewInstance(ctx, cancel, IMPLICIT_FLOW_RESPONSE_TYPE)
 	flow.AuthorizationURL, _ = url.Parse("http://example.com")
 	AddQueryParameter(flow.AuthorizationURL, "k1", "v1")
 	assert.Equal(t, "http://example.com?k1=v1", flow.AuthorizationURL.String())

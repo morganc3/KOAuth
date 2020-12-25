@@ -2,6 +2,8 @@ package oauth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"log"
 	"net/http"
 	"net/url"
@@ -20,10 +22,10 @@ const (
 )
 
 type FlowInstance struct {
-	Ctx                 context.Context
-	Cancel              context.CancelFunc
 	FlowType            FlowType
 	FlowTimeoutSeconds  time.Duration
+	Ctx                 context.Context
+	Cancel              context.CancelFunc
 	AuthorizationURL    *url.URL
 	ProvidedRedirectURL *url.URL
 	RedirectedToURL     *url.URL
@@ -45,29 +47,30 @@ const FLOW_TIMEOUT_SECONDS = 5
 // 		error / authz issue occurs.
 // Support should be added to support both of these cases
 
-func NewInstance(ft FlowType) *FlowInstance {
-	ctx, cancel := chromedp.NewContext(ChromeContext)
+// Scenario A is accounted for currently, as we use the same
+// chrome context for each check.
+
+func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType) *FlowInstance {
 	redirectUri, err := url.Parse(config.Config.OAuthConfig.RedirectURL)
 	if err != nil {
 		log.Fatalf("Failed to parse provided redirect_uri in config file")
 	}
 	flowInstance := FlowInstance{
 		FlowType:            ft,
-		Ctx:                 ctx,
-		Cancel:              cancel,
 		FlowTimeoutSeconds:  FLOW_TIMEOUT_SECONDS,
 		ProvidedRedirectURL: redirectUri,
 		RedirectedToURL:     new(url.URL),
 		ExchangeRequest:     new(ExchangeRequest),
+		Ctx:                 cx,
+		Cancel:              cancel,
 	}
 	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value")
 	return &flowInstance
 }
 
 func (i *FlowInstance) DoAuthorizationRequest() error {
-	defer i.Cancel()
 	var actions []chromedp.Action
-	actions = getSessionActions()
+	actions = GetSessionActions()
 
 	urlString := i.AuthorizationURL.String()
 
@@ -75,16 +78,24 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 
 	// adds listener which will cancel the context
 	// if a redirect to redirect_uri occurs
-	ch := waitRedirect(i.Ctx, i.Cancel, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
-	err := RunWithTimeOut(&i.Ctx, i.FlowTimeoutSeconds, actions)
-
-	// Error caused by context being cancelled when
-	// we hit our redirect URL
-	if err != nil && err.Error() == CONTEXT_CANCELLED_ERROR {
-		urlstr := <-ch
-		i.RedirectedToURL = urlstr
-		return nil
+	ch := WaitRedirect(i.Ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
+	err := chromedp.Run(i.Ctx, actions...)
+	c, err := RunWithTimeOut(&i.Ctx, FLOW_TIMEOUT_SECONDS, actions)
+	if err != nil {
+		return err
 	}
+
+	select {
+	case <-c.Done():
+		return err
+	case urlstr := <-ch:
+		i.RedirectedToURL = urlstr
+		err = i.GetURLError() // get error as defined in rfc6749
+		if err != nil {
+			return err
+		}
+	}
+
 	return err
 
 }
@@ -98,6 +109,9 @@ func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state string)
 	}
 	// If supported, this will ensure that the authorization consent prompt only shows once
 	SetQueryParameter(URL, "prompt", "none")
+	// some authz servers (such as Okta) require a Nonce
+	// despite it not being part of the RFC
+	SetQueryParameter(URL, "nonce", randStr(32))
 	return URL
 }
 
@@ -110,4 +124,12 @@ func GetImplicitAccessTokenFromURL(urlString string) string {
 	values, _ := url.ParseQuery(u.Fragment)
 	tokenString := values.Get(ACCESS_TOKEN)
 	return tokenString
+}
+
+func randStr(len int) string {
+	buff := make([]byte, len)
+	rand.Read(buff)
+	str := base64.StdEncoding.EncodeToString(buff)
+	// Base 64 can be longer than len
+	return str[:len]
 }

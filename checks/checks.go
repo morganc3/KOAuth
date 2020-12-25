@@ -1,12 +1,14 @@
 package checks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 
+	"github.com/chromedp/chromedp"
 	"github.com/morganc3/KOAuth/oauth"
 )
 
@@ -49,7 +51,7 @@ type Check struct {
 	State `json:"-"`
 }
 
-func Init(checkJSONFile string) {
+func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc) {
 	Mappings = getMappings()
 	// read checkJSONfile and marshal
 	jsonFile, err := os.Open(checkJSONFile)
@@ -67,6 +69,7 @@ func Init(checkJSONFile string) {
 		log.Fatal("Error unmarshalling check JSON file")
 	}
 
+	currCtx := ctx
 	for i, c := range checks.Checks {
 		checks.Checks[i].CheckFunc = getMapping(c.CheckName)
 		var responseType oauth.FlowType
@@ -78,7 +81,12 @@ func Init(checkJSONFile string) {
 		default:
 			log.Fatalf("Invalid flow type given for check %s", c.CheckName)
 		}
-		checks.Checks[i].FlowInstance = oauth.NewInstance(responseType)
+
+		// make a new context child for each tabs
+		// update ctx to the current context of the new instance
+		newCtx, newCancel := chromedp.NewContext(currCtx)
+		checks.Checks[i].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType)
+		currCtx = newCtx
 
 		// append pointer to the check to our list
 		ChecksList = append(ChecksList, &checks.Checks[i])
@@ -122,6 +130,9 @@ func WriteResults(outfile string) {
 		// then marshal to bytes and write to file
 
 		var outCheck CheckOut
+		if c.State != SKIP {
+			c.SkipReason = ""
+		}
 		bslice, err := json.Marshal(c)
 		if err != nil {
 			log.Fatalf("Could not Marshal to JSON for Check %s\n", c.CheckName)

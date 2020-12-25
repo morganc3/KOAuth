@@ -39,7 +39,7 @@ func RedirectURICheck(fi *oauth.FlowInstance, redirectUri string) (State, error)
 
 // totally change redirect URI
 func RedirectURITotalChange(fi *oauth.FlowInstance) (State, error) {
-	return RedirectURICheck(fi, "http://fakedomain123321.com/callback")
+	return RedirectURICheck(fi, "https://fakedomain123321.com/callback")
 }
 
 // downgrade from HTTPS to HTTP

@@ -1,12 +1,14 @@
 package oauth
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/chromedp/chromedp"
 )
 
 var Session KOAuthSession
@@ -14,7 +16,6 @@ var Session KOAuthSession
 type KOAuthSession struct {
 	Cookies      []SessionCookie    `json:"cookies"`
 	LocalStorage []LocalStorageItem `json:"localStorage"`
-	Client       http.Client
 }
 
 func NewSession(sessionFile string, u *url.URL) KOAuthSession {
@@ -39,7 +40,8 @@ func readSessionInformation(sessionFile string) KOAuthSession {
 // TODO - this should check both authz code flow and implicit flow
 // Attempt normal implicit flow to see if we successfully get an Access Token back
 func (session *KOAuthSession) ValidateSession() (*FlowInstance, bool) {
-	implicitInstance := NewInstance(IMPLICIT_FLOW_RESPONSE_TYPE)
+	ctx, cancel := chromedp.NewContext(context.Background())
+	implicitInstance := NewInstance(ctx, cancel, IMPLICIT_FLOW_RESPONSE_TYPE)
 	err := implicitInstance.DoAuthorizationRequest()
 	if err != nil {
 		log.Println(err)
