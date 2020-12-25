@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"flag"
+	"time"
 
 	"github.com/chromedp/chromedp"
 	"github.com/morganc3/KOAuth/checks"
@@ -16,7 +17,10 @@ func Execute() {
 	outFile := flag.String("outfile", "output.json", "results output file")
 	proxy := flag.String("proxy", "", "HTTP Proxy <ip>:<port>")
 	userAgent := flag.String("user-agent", `Chrome`, "User-Agent Header for Chrome")
+	timeout := flag.Int("timeout", 4, "Timeout for waiting for OAuth redirects to redirect_uri")
 	flag.Parse()
+
+	oauth.FLOW_TIMEOUT_SECONDS = time.Duration(*timeout)
 
 	var chromeOpts []chromedp.ExecAllocatorOption
 

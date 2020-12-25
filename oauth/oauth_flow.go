@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -37,7 +38,7 @@ type ExchangeRequest struct {
 	Response *http.Response
 }
 
-const FLOW_TIMEOUT_SECONDS = 5
+var FLOW_TIMEOUT_SECONDS time.Duration
 
 // TODO: There are likely to be applications where
 // either:
@@ -70,7 +71,6 @@ func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType) *Fl
 
 func (i *FlowInstance) DoAuthorizationRequest() error {
 	var actions []chromedp.Action
-	actions = GetSessionActions()
 
 	urlString := i.AuthorizationURL.String()
 
@@ -79,7 +79,6 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 	// adds listener which will cancel the context
 	// if a redirect to redirect_uri occurs
 	ch := WaitRedirect(i.Ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
-	err := chromedp.Run(i.Ctx, actions...)
 	c, err := RunWithTimeOut(&i.Ctx, FLOW_TIMEOUT_SECONDS, actions)
 	if err != nil {
 		return err
@@ -90,6 +89,7 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 		return err
 	case urlstr := <-ch:
 		i.RedirectedToURL = urlstr
+		fmt.Println(urlstr)
 		err = i.GetURLError() // get error as defined in rfc6749
 		if err != nil {
 			return err

@@ -179,6 +179,7 @@ func PrintResults() {
 // iframes allowed at consent url
 // state not supported
 
+// pkce only supported for implicit
 // pkce downgrade sha256 -> plain
 // pkce downgrade (stop using pkce at all)
 

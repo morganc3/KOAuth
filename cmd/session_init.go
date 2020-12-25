@@ -24,7 +24,6 @@ func initSession() (context.Context, context.CancelFunc) {
 
 	// adds listener listening for a redirect to our redirect_uri
 	ch := oauth.WaitRedirect(ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
-	// extra long timeout since we'll be manually logging in here
 
 	err := chromedp.Run(ctx, chromedp.Navigate(urlString))
 	if err != nil {
