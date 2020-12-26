@@ -29,7 +29,7 @@ The timeout option defines how long each tab will wait to be redirected to the r
 before assuming the request failed. 
 
 
-# Checks
+## Checks
 Custom checks can be added by placing the checks into a JSON file and passing with the `--checks` flag.
 By default, the checks in `./config/resources/checks.json` will be used. An example check is shown 
 below:
@@ -46,12 +46,20 @@ below:
 }
 ```
 
+Templating can be used in these checks to take values from the OAuth config. The 
+following fields are supported: REDIRECT_URI, REDIRECT_SCHEME, REDIRECT_DOMAIN, REDIRECT_PATH,
+CLIENT_ID, CLIENT_SECRET, SCOPES, AUTH_URL, TOKEN_URL. Example below shows using 
+templating to add a redirect_uri parameter that adds a malicious subdomain to the _valid_ 
+redirect URI.
+
+```"authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://maliciousdomain.{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]},```
+
 The "deleteURLParams" field is used to delete "required" oauth URL params in the 
 authorization request. The "authURLParams" field adds the provided params to the 
 authorization URL request, and these parameters will always be added _after_ 
 the params specified by "deleteURLParams" are deleted. 
 
-In the above example, the proper "redirect_uri" from the OAuth 2.0 config is replaced 
+In the previous example, the proper "redirect_uri" from the OAuth 2.0 config is replaced 
 with the value of "https://maliciousdomain.h0.gs".
 
 For various checks, you may wish to provide malformed "redirect_uri"
