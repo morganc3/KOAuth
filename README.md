@@ -21,7 +21,7 @@ The scanner works by:
 various checks
 
 Usage:
-- Place OAuth 2.0 credentials/information in config.json
+- Place OAuth 2.0 credentials/information in config JSON file. An example is in config-template.json
 - `go build`
 - `./KOAuth --config configfile.json --checks ./config/resources/checks.json --timeout 4`
 
