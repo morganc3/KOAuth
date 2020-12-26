@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	b64 "encoding/base64"
-	"fmt"
 
 	"github.com/morganc3/KOAuth/config"
 	"github.com/morganc3/KOAuth/oauth"
@@ -19,8 +18,6 @@ func PkceSupported(fi *oauth.FlowInstance) (State, error) {
 	hashb64 := b64.URLEncoding.EncodeToString(hash[:])
 
 	pkceCodeChallenge := hashb64
-	fmt.Println(pkceCodeChallenge)
-	fmt.Println(oauth.PKCE_S256)
 	oauth.SetQueryParameter(fi.AuthorizationURL, oauth.PKCE_CODE_CHALLENGE, pkceCodeChallenge)
 	oauth.SetQueryParameter(fi.AuthorizationURL, oauth.PKCE_CODE_CHALLENGE_METHOD, oauth.PKCE_S256)
 
@@ -32,8 +29,9 @@ func PkceSupported(fi *oauth.FlowInstance) (State, error) {
 
 	authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE)
 	opt := oauth2.SetAuthURLParam(oauth.PKCE_CODE_VERIFIER, string(data))
-	opt2 := oauth2.SetAuthURLParam(oauth.PKCE_CODE_CHALLENGE_METHOD, oauth.PKCE_S256)
-	tok, err := config.Config.OAuthConfig.Exchange(context.TODO(), authorizationCode, opt, opt2)
+	// opt2 := oauth2.SetAuthURLParam(oauth.PKCE_CODE_CHALLENGE_METHOD, oauth.PKCE_S256)
+
+	tok, err := config.Config.OAuthConfig.Exchange(context.TODO(), authorizationCode, opt)
 	if err != nil {
 		return WARN, err
 	}

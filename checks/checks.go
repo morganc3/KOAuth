@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
+	"net/url"
 
 	"github.com/chromedp/chromedp"
+	"github.com/morganc3/KOAuth/config"
 	"github.com/morganc3/KOAuth/oauth"
 )
 
@@ -31,14 +32,19 @@ type ChecksIn struct {
 }
 
 type Check struct {
-	CheckName    string              `json:"name"`
-	RiskRating   string              `json:"risk"`
-	Description  string              `json:"description"`
-	SkipReason   string              `json:"skipReason,omitempty"`
-	FlowType     string              `json:"flowType"`
-	References   string              `json:"references,omitempty"`
-	FlowInstance *oauth.FlowInstance `json:"-"`
-	CheckFunc    CheckFunction       `json:"-"`
+	CheckName                 string              `json:"name"`
+	RiskRating                string              `json:"risk"`
+	Description               string              `json:"description"`
+	SkipReason                string              `json:"skipReason,omitempty"`
+	FlowType                  string              `json:"flowType"`
+	References                string              `json:"references,omitempty"`
+	AuthURLParams             map[string][]string `json:"authUrlParams,omitempty"`
+	DeleteAuthURLParams       []string            `json:"deleteUrlParams,omitempty"`
+	TokenExchangeParams       map[string][]string `json:"tokenExchangeParams,omitempty"`
+	DeleteTokenExchangeParams []string            `json:"deleteExchangeParams,omitempty"`
+	WaitForRedirectTo         string              `json:"waitForRedirectTo,omitempty"`
+	FlowInstance              *oauth.FlowInstance `json:"-"`
+	CheckFunc                 CheckFunction       `json:"-"`
 
 	// Output message giving information about why the check failed
 	FailMessage string `json:"-"`
@@ -53,20 +59,15 @@ type Check struct {
 
 func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc) {
 	Mappings = getMappings()
-	// read checkJSONfile and marshal
-	jsonFile, err := os.Open(checkJSONFile)
-	if err != nil {
-		log.Fatal("Error opening checks JSON file")
+	jsonBytes := config.GenerateChecksInput(checkJSONFile)
+	if len(jsonBytes) <= 0 {
+		log.Fatalf("Error opening or parsing JSON file")
 	}
-	defer jsonFile.Close()
-	byteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		log.Fatal("Error reading checks JSON file")
-	}
+	fmt.Println(string(jsonBytes))
 	var checks ChecksIn
-	err = json.Unmarshal(byteValue, &checks)
+	err := json.Unmarshal(jsonBytes, &checks)
 	if err != nil {
-		log.Fatal("Error unmarshalling check JSON file")
+		log.Fatalf("Error unmarshalling check JSON file:\n%s\n", err.Error())
 	}
 
 	currCtx := ctx
@@ -96,7 +97,13 @@ func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc) 
 
 // Perform check, check returns bool for if it was passed
 func (c *Check) DoCheck() {
-	state, err := c.CheckFunc(c.FlowInstance)
+	var state State
+	var err error
+	if c.CheckFunc != nil {
+		state, err = c.CheckFunc(c.FlowInstance)
+	} else {
+		state, err = c.RunCheck()
+	}
 	c.State = state
 	if err != nil {
 		c.ErrorMessage = err.Error()
@@ -168,12 +175,6 @@ func PrintResults() {
 
 // TODO checks:
 
-// add new redirect URI param
-// change redirect uri protocol to http from https
-// change redirect URI entirely
-// change redirect URI subdomain
-// change redirect URI path
-// check if redirect URI allows http at all, to begin with
 // multiple redirect uri's
 
 // iframes allowed at consent url
@@ -186,3 +187,107 @@ func PrintResults() {
 // client secret not required
 
 // Changes redirect URI, checks if we are still redirected
+
+func (c *Check) RunCheck() (State, error) {
+	// TODO check if should skip the check
+	// documentation should be added to say if a check in some cases should be
+	// skipped, we should add a skipMessage in checks.json and a skipfunction
+	// to detect if it should be skipped
+	fi := c.FlowInstance
+	authzUrl := fi.AuthorizationURL
+
+	// first delete any "required" auth URL parameters that we have specfically
+	// defined in the check to be deleted
+	deleteRequiredParams(authzUrl, c.DeleteAuthURLParams)
+
+	// now, add additional URL parameters defined in the check
+	addAuthURLParams(authzUrl, c.AuthURLParams)
+
+	// set the redirect_uri value we will wait to be redirected to
+	// if none was provided, this will default to the value in the redirect_uri URL parameter
+	c.setExpectedRedirectUri()
+
+	var err error
+	switch c.FlowType {
+	case "authorization-code":
+		// TODO
+		// deleteRequiredExchangeParams()
+		// addTokenExchangeParams()
+		err = fi.DoAuthorizationRequest()
+		// exchange
+	case "implicit":
+		err = fi.DoAuthorizationRequest()
+	}
+
+	// this will only be set with a value
+	// if we were redirected to the provided redirect_uri
+	// therefore, if this is not empty, we were redirected
+	// to the malicious URI
+	if fi.RedirectedToURL.String() != "" {
+		return FAIL, nil
+	}
+
+	if err != nil {
+		return WARN, err
+	}
+	return PASS, nil
+
+}
+
+// Chrome checks if implicit flow tests pass by if we are redirected
+// to the expected redirect URI without an error. This sets
+// which redirect URI we should be waiting to be redirected to.
+func (c *Check) setExpectedRedirectUri() {
+	if len(c.WaitForRedirectTo) > 0 {
+		// if we have specifically set the parameter in checks.json
+		// to have a URL we are waiting to be redirected to
+		// this is useful for cases where, for example, we provide
+		// two redirect_uri parameters (one valid and one invalid) as part of a test.
+		maliciousRedirectURI, err := url.Parse(c.WaitForRedirectTo)
+		if err != nil {
+			log.Fatalf("Bad WaitForRedirectTo value\n")
+		}
+		c.FlowInstance.ProvidedRedirectURL = maliciousRedirectURI
+	} else {
+		ur := c.FlowInstance.AuthorizationURL
+		// addAuthURLPArams() is called before this, so we can search for the
+		// redirect_uri parameter in the URL in the normal case
+		redirectUriStr := oauth.GetQueryParameterFirst(ur, oauth.REDIRECT_URI)
+		redirectUri, err := url.Parse(redirectUriStr)
+		if err != nil {
+			log.Fatalf("Bad redirect_uri param")
+		}
+		c.FlowInstance.ProvidedRedirectURL = redirectUri
+	}
+}
+
+// Add URL parameter to authorization URL. If the parameter already
+// exists in the URL, this will add an additional.
+func addAuthURLParams(authzUrl *url.URL, pm map[string][]string) {
+	for key, values := range pm {
+		for _, v := range values {
+			oauth.AddQueryParameter(authzUrl, key, v)
+		}
+	}
+}
+
+// Delete required parameters that are
+// specified to be manually deleted. Parameters should always
+// be deleted before new ones are added.
+// The following parameters are required and would need
+// to be deleted if desired: state, redirect_uri, client_id, scope, response_type
+func deleteRequiredParams(authzUrl *url.URL, p []string) {
+	for _, d := range p {
+		oauth.DelQueryParameter(authzUrl, d)
+	}
+}
+
+func addTokenExchangeParams(authzUrl *url.URL, pm map[string][]string) {
+	// TODO
+	// likely need to call oauth2's internal.RetrieveToken directly for this
+}
+
+func deleteRequiredExchangeParams(authzUrl *url.URL, p []string) {
+	// TODO
+	//internal.RetrieveToken
+}

@@ -1,16 +1,14 @@
 package checks
 
-import "log"
-
 var Mappings map[string]CheckFunction
 
 // mappings of check names from JSON to functions
+// these are mappings of custom check functions
+// for checks that can't be accomplished with the
+// simple model defined in our checks.json structure/templating
 func getMappings() map[string]CheckFunction {
 	return map[string]CheckFunction{
-		"redirect-uri-total-change":     RedirectURITotalChange,
-		"redirect-uri-scheme-downgrade": RedirectURISchemeDowngrade,
-		"state-supported":               StateSupported,
-		"pkce-supported":                PkceSupported,
+		"state-supported": StateSupported,
 	}
 }
 
@@ -18,6 +16,5 @@ func getMapping(name string) CheckFunction {
 	if v, ok := Mappings[name]; ok {
 		return v
 	}
-	log.Fatalf("Check name %s does not map to function in checks/mapping.go", name)
 	return nil
 }
