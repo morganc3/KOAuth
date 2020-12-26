@@ -19,6 +19,7 @@ func Execute() {
 	proxy := flag.String("proxy", "", "HTTP Proxy <ip>:<port>")
 	userAgent := flag.String("user-agent", `Chrome`, "User-Agent Header for Chrome")
 	timeout := flag.Int("timeout", 4, "Timeout for waiting for OAuth redirects to redirect_uri")
+	PromptFlag := flag.String("prompt", "none", "Value of \"prompt\" parameter in authorization request. If the authorization server does not support prompt=none, it should be set to \"login\" or \"select_account\". If the pressence of the prompt parameter breaks the flow, set to this flag to the string \"DONT_SEND\" and it will not be sent.")
 	flag.Parse()
 
 	oauth.FLOW_TIMEOUT_SECONDS = time.Duration(*timeout)
@@ -52,7 +53,7 @@ func Execute() {
 	fctx, fctxCancel := initSession()
 	defer fctxCancel()
 
-	checks.Init(*checkFile, fctx, fctxCancel)
+	checks.Init(*checkFile, fctx, fctxCancel, *PromptFlag)
 	checks.DoChecks()
 	checks.PrintResults()
 	checks.WriteResults(*outFile)

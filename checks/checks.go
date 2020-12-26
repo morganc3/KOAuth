@@ -57,7 +57,7 @@ type Check struct {
 	State `json:"-"`
 }
 
-func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc) {
+func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc, promptFlag string) {
 	Mappings = getMappings()
 	jsonBytes := config.GenerateChecksInput(checkJSONFile)
 	if len(jsonBytes) <= 0 {
@@ -85,7 +85,7 @@ func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc) 
 		// make a new context child for each tabs
 		// update ctx to the current context of the new instance
 		newCtx, newCancel := chromedp.NewContext(currCtx)
-		checks.Checks[i].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType)
+		checks.Checks[i].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType, promptFlag)
 		currCtx = newCtx
 
 		// append pointer to the check to our list

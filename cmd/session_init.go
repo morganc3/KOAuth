@@ -15,10 +15,9 @@ import (
 
 func initSession() (context.Context, context.CancelFunc) {
 	ctx, cancel := chromedp.NewContext(oauth.ChromeExecContext)
-	i := oauth.NewInstance(ctx, cancel, oauth.IMPLICIT_FLOW_RESPONSE_TYPE)
-
 	// We should be prompted for auth as this is our first request
-	oauth.DelQueryParameter(i.AuthorizationURL, "prompt")
+	i := oauth.NewInstance(ctx, cancel, oauth.IMPLICIT_FLOW_RESPONSE_TYPE, "DONT_SEND")
+
 	urlString := i.AuthorizationURL.String()
 
 	// adds listener listening for a redirect to our redirect_uri

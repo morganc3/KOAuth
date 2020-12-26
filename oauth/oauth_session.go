@@ -41,7 +41,7 @@ func readSessionInformation(sessionFile string) KOAuthSession {
 // Attempt normal implicit flow to see if we successfully get an Access Token back
 func (session *KOAuthSession) ValidateSession() (*FlowInstance, bool) {
 	ctx, cancel := chromedp.NewContext(context.Background())
-	implicitInstance := NewInstance(ctx, cancel, IMPLICIT_FLOW_RESPONSE_TYPE)
+	implicitInstance := NewInstance(ctx, cancel, IMPLICIT_FLOW_RESPONSE_TYPE, "none")
 	err := implicitInstance.DoAuthorizationRequest()
 	if err != nil {
 		log.Println(err)

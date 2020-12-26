@@ -50,7 +50,7 @@ var FLOW_TIMEOUT_SECONDS time.Duration
 // Scenario A is accounted for currently, as we use the same
 // chrome context for each check.
 
-func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType) *FlowInstance {
+func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType, promptFlag string) *FlowInstance {
 	redirectUri, err := url.Parse(config.Config.OAuthConfig.RedirectURL)
 	if err != nil {
 		log.Fatalf("Failed to parse provided redirect_uri in config file")
@@ -64,7 +64,7 @@ func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType) *Fl
 		Ctx:                 cx,
 		Cancel:              cancel,
 	}
-	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value")
+	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value", promptFlag)
 	return &flowInstance
 }
 
@@ -98,15 +98,20 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 
 }
 
-func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state string) *url.URL {
+func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.URL {
 	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam(RESPONSE_TYPE, string(flowType))
 	URLString := config.Config.OAuthConfig.AuthCodeURL(state, option)
 	URL, err := url.Parse(URLString)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// If supported, this will ensure that the authorization consent prompt only shows once
-	SetQueryParameter(URL, "prompt", "none")
+
+	switch promptFlag {
+	case "DONT_SEND":
+	case "default":
+		SetQueryParameter(URL, "prompt", promptFlag)
+	}
+
 	// some authz servers (such as Okta) require a Nonce
 	// despite it not being part of the RFC
 	SetQueryParameter(URL, "nonce", randStr(32))
