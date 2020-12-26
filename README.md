@@ -25,6 +25,8 @@ Usage:
 - `go build`
 - `./KOAuth --config configfile.json --checks ./config/resources/checks.json --timeout 4`
 
+`./KOAuth --help` for explanation of cli flags
+
 The timeout option defines how long each tab will wait to be redirected to the redirect_uri 
 before assuming the request failed. 
 
