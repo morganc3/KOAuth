@@ -52,8 +52,8 @@
             "description":"Two redirect uri's were provided, one is correct and one is incorrect. Ensure we are not redirected to the incorrect URI.",
             "flowType":"implicit",
             "references":"",
-            "authURLParams":{"redirect_uri":["https://malicioussdomain.h0.gs"]},
-            "waitForRedirectTo":"https://malicioussdomain.h0.gs"
+            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"]},
+            "waitForRedirectTo":"{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"
         },
         {
             "name":"state-supported",

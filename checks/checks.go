@@ -63,7 +63,6 @@ func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc) 
 	if len(jsonBytes) <= 0 {
 		log.Fatalf("Error opening or parsing JSON file")
 	}
-	fmt.Println(string(jsonBytes))
 	var checks ChecksIn
 	err := json.Unmarshal(jsonBytes, &checks)
 	if err != nil {
@@ -162,7 +161,7 @@ func WriteResults(outfile string) {
 	fmt.Printf("Output has been saved to %s\n", outfile)
 }
 
-// print Check results nicely to console
+// print Check results to console
 func PrintResults() {
 	for _, c := range ChecksList {
 		fmt.Println(c.CheckName, c.State)
@@ -174,8 +173,6 @@ func PrintResults() {
 }
 
 // TODO checks:
-
-// multiple redirect uri's
 
 // iframes allowed at consent url
 // state not supported

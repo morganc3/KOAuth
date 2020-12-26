@@ -1,7 +1,6 @@
 package oauth
 
 import (
-	"fmt"
 	"log"
 	"net/url"
 )
@@ -16,14 +15,14 @@ func SetQueryParameter(u *url.URL, key, value string) {
 // Adds a query parameter value. If a value already exists with
 // the specified key, this will add a second key/value pair in the URL
 func AddQueryParameter(u *url.URL, key, value string) {
-	queryString := u.RawQuery
-	if queryString == "" {
-		queryString += fmt.Sprintf("%s=%s", key, value)
+	q := u.Query()
+	if len(q[key]) == 0 {
+		q[key] = []string{value}
 	} else {
-		queryString += fmt.Sprintf("&%s=%s", key, value)
+		q[key] = append(q[key], value)
 	}
 
-	u.RawQuery = queryString
+	u.RawQuery = q.Encode()
 }
 
 // Returns all values in the URL fragment
