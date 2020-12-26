@@ -46,7 +46,7 @@ below:
 }
 ```
 
-Templating can be used in these checks to take values from the OAuth config. The 
+Mustache templating can be used in these checks to take values from the OAuth config. The 
 following fields are supported: REDIRECT_URI, REDIRECT_SCHEME, REDIRECT_DOMAIN, REDIRECT_PATH,
 CLIENT_ID, CLIENT_SECRET, SCOPES, AUTH_URL, TOKEN_URL. Example below shows using 
 templating to add a redirect_uri parameter that adds a malicious subdomain to the _valid_ 
