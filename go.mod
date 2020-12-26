@@ -11,6 +11,7 @@ require (
 	github.com/gobwas/ws v1.0.4 // indirect
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/ogier/pflag v0.0.1
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43

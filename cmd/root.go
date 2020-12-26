@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"context"
-	"flag"
 	"time"
 
 	"github.com/chromedp/chromedp"
 	"github.com/morganc3/KOAuth/checks"
 	"github.com/morganc3/KOAuth/config"
 	"github.com/morganc3/KOAuth/oauth"
+	flag "github.com/ogier/pflag"
 )
 
 // TODO: add support for setting "prompt" param for checks
@@ -19,7 +19,7 @@ func Execute() {
 	proxy := flag.String("proxy", "", "HTTP Proxy <ip>:<port>")
 	userAgent := flag.String("user-agent", `Chrome`, "User-Agent Header for Chrome")
 	timeout := flag.Int("timeout", 4, "Timeout for waiting for OAuth redirects to redirect_uri")
-	PromptFlag := flag.String("prompt", "none", "Value of \"prompt\" parameter in authorization request. If the authorization server does not support prompt=none, it should be set to \"login\" or \"select_account\". If the pressence of the prompt parameter breaks the flow, set to this flag to the string \"DONT_SEND\" and it will not be sent.")
+	PromptFlag := flag.String("prompt", "none", "Value of \"prompt\" parameter in authorization request. If the authorization server does\n\t\t not support prompt=none, it should be set to \"login\" or \"select_account\". If the pressence of the prompt parameter\n\t\t breaks the flow, set to this flag to the string \"DONT_SEND\" and it will not be sent.")
 	flag.Parse()
 
 	oauth.FLOW_TIMEOUT_SECONDS = time.Duration(*timeout)
