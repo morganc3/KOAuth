@@ -5,7 +5,6 @@ import (
 )
 
 // checks if state is supported
-// ones like these should probably run for bth imlpicit and authz code ?
 func StateSupported(fi *oauth.FlowInstance) (State, error) {
 	// we send state by default
 	err := fi.DoAuthorizationRequest()

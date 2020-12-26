@@ -69,3 +69,7 @@ parameters or more than one. In this case where it's not obvious which
 to be redirected to during the flow.
 
 ```"waitForRedirectTo":"https://malicious.h0.gs"```
+
+If the check JSON format does not work to automate a check, a custom check function can be added, 
+mapping the name of a check to a custom function. An example of this is in ./checks/state.go, 
+and the mapping is added in ./checks/mapping.go.
