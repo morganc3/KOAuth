@@ -53,3 +53,11 @@ the params specified by "deleteURLParams" are deleted.
 
 In the above example, the proper "redirect_uri" from the OAuth 2.0 config is replaced 
 with the value of "https://maliciousdomain.h0.gs".
+
+For various checks, you may wish to provide malformed "redirect_uri"
+parameters or more than one. In this case where it's not obvious which 
+"redirect_uri" should be waited to be redirected to, provide the 
+"waitForRedirectTo" key to specify which URL the scanner should wait 
+to be redirected to during the flow.
+
+```"waitForRedirectTo":"https://malicious.h0.gs"```

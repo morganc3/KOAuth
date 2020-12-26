@@ -62,7 +62,7 @@
             "flowType":"implicit",
             "references":"",
             "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}@malicious.h0.gs"]},
-            "waitForRedirectTo":"malicious.h0.gs"
+            "waitForRedirectTo":"https://malicious.h0.gs"
         },
         {
             "name":"state-supported",
