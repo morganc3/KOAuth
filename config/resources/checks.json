@@ -56,6 +56,15 @@
             "waitForRedirectTo":"{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"
         },
         {
+            "name":"redirect-uri-improper-parsing",
+            "risk":"high",
+            "description":"Attempt to trick redirect URI parse using \"@\"",
+            "flowType":"implicit",
+            "references":"",
+            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}@malicious.h0.gs"]},
+            "waitForRedirectTo":"malicious.h0.gs"
+        },
+        {
             "name":"state-supported",
             "risk":"medium",
             "description":"Check if the OAuth state parameter is supported",
