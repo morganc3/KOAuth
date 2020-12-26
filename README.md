@@ -44,6 +44,7 @@ below:
     "authURLParams":{"redirect_uri":["https://maliciousdomain.h0.gs"]},
     "deleteURLParams":["redirect_uri"]
 }
+```
 
 The "deleteURLParams" field is used to delete "required" oauth URL params in the 
 authorization request. The "authURLParams" field adds the provided params to the 
@@ -52,4 +53,3 @@ the params specified by "deleteURLParams" are deleted.
 
 In the above example, the proper "redirect_uri" from the OAuth 2.0 config is replaced 
 with the value of "https://maliciousdomain.h0.gs".
-```
