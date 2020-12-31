@@ -98,6 +98,10 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 
 }
 
+func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Token, error) {
+	return oauth2.RetrieveToken(ctx, &config.Config.OAuthConfig, v)
+}
+
 func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.URL {
 	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam(RESPONSE_TYPE, string(flowType))
 	URLString := config.Config.OAuthConfig.AuthCodeURL(state, option)

@@ -30,7 +30,7 @@ type KOAuthConfig struct {
 }
 
 // Get an oauth2 config from JSON file
-func readOAuthConfig(oauthConfigFile string) oauth2.Config {
+func readOAuthConfig(oauthConfigFile string, authStyle string) oauth2.Config {
 	jsonFile, err := os.Open(oauthConfigFile)
 	if err != nil {
 		panic("Error opening session JSON file")
@@ -43,6 +43,15 @@ func readOAuthConfig(oauthConfigFile string) oauth2.Config {
 	var conf OAuthConfigWrapper
 	json.Unmarshal(byteValue, &conf)
 
+	var clientAuth oauth2.AuthStyle
+	switch authStyle {
+	case "BASIC":
+		clientAuth = oauth2.AuthStyleInHeader
+	case "BODY":
+		clientAuth = oauth2.AuthStyleInParams
+	default:
+		clientAuth = oauth2.AuthStyleAutoDetect
+	}
 	var oauthConfig = &oauth2.Config{
 		RedirectURL:  conf.RedirectURL,
 		ClientID:     conf.ClientID,
@@ -51,7 +60,7 @@ func readOAuthConfig(oauthConfigFile string) oauth2.Config {
 		Endpoint: oauth2.Endpoint{
 			AuthURL:   conf.Endpoint.AuthURL,
 			TokenURL:  conf.Endpoint.TokenURL,
-			AuthStyle: 0,
+			AuthStyle: clientAuth,
 		},
 	}
 	return *oauthConfig
@@ -73,8 +82,8 @@ func (c *KOAuthConfig) GetConfigHost() string {
 	return getHost(c.OAuthConfig.Endpoint.AuthURL)
 }
 
-func NewConfig(oauthConfigFile string) KOAuthConfig {
+func NewConfig(oauthConfigFile, authStyle string) KOAuthConfig {
 	conf := new(KOAuthConfig)
-	conf.OAuthConfig = readOAuthConfig(oauthConfigFile)
+	conf.OAuthConfig = readOAuthConfig(oauthConfigFile, authStyle)
 	return *conf
 }

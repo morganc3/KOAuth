@@ -3,6 +3,7 @@ package checks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,26 +33,39 @@ type ChecksIn struct {
 }
 
 type Check struct {
-	CheckName                 string              `json:"name"`
-	RiskRating                string              `json:"risk"`
-	Description               string              `json:"description"`
-	SkipReason                string              `json:"skipReason,omitempty"`
-	FlowType                  string              `json:"flowType"`
-	References                string              `json:"references,omitempty"`
-	AuthURLParams             map[string][]string `json:"authUrlParams,omitempty"`
-	DeleteAuthURLParams       []string            `json:"deleteUrlParams,omitempty"`
-	TokenExchangeParams       map[string][]string `json:"tokenExchangeParams,omitempty"`
-	DeleteTokenExchangeParams []string            `json:"deleteExchangeParams,omitempty"`
-	WaitForRedirectTo         string              `json:"waitForRedirectTo,omitempty"`
-	FlowInstance              *oauth.FlowInstance `json:"-"`
-	CheckFunc                 CheckFunction       `json:"-"`
+	CheckName   string `json:"name"`
+	RiskRating  string `json:"risk"`
+	Description string `json:"description"`
+	SkipReason  string `json:"skipReason,omitempty"`
+	FlowType    string `json:"flowType"`
+	References  string `json:"references,omitempty"`
+
+	// Extra parameters to be added to Auth URL
+	AuthURLParams map[string][]string `json:"authUrlParams,omitempty"`
+
+	// Default parameters that should be deleted prior to browsing to Auth URL
+	DeleteAuthURLParams []string `json:"deleteUrlParams,omitempty"`
+
+	// Not taken as input, default params required for the code exchange
+	TokenExchangeParams url.Values `json:"-"`
+
+	// Extra parameters to be added to the code exchange
+	TokenExchangeExtraParams map[string][]string `json:"tokenExchangeExtraParams,omitempty"`
+
+	// Default parameters that should be deleted prior to code exchange
+	DeleteTokenExchangeParams []string `json:"deleteExchangeParams,omitempty"`
+
+	// URL to wait to be redirected to. If redirected here, the check "fails"
+	WaitForRedirectTo string              `json:"waitForRedirectTo,omitempty"`
+	FlowInstance      *oauth.FlowInstance `json:"-"`
+	CheckFunc         CheckFunction       `json:"-"`
 
 	// Output message giving information about why the check failed
 	FailMessage string `json:"-"`
 
 	// Output message giving information about an error that occurred during
 	// the check
-	ErrorMessage string `json:"-"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 
 	// State contains result of the check
 	State `json:"-"`
@@ -63,15 +77,15 @@ func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc, 
 	if len(jsonBytes) <= 0 {
 		log.Fatalf("Error opening or parsing JSON file")
 	}
-	var checks ChecksIn
+	var checks []Check
 	err := json.Unmarshal(jsonBytes, &checks)
 	if err != nil {
 		log.Fatalf("Error unmarshalling check JSON file:\n%s\n", err.Error())
 	}
 
 	currCtx := ctx
-	for i, c := range checks.Checks {
-		checks.Checks[i].CheckFunc = getMapping(c.CheckName)
+	for i, c := range checks {
+		checks[i].CheckFunc = getMapping(c.CheckName)
 		var responseType oauth.FlowType
 		switch c.FlowType {
 		case "authorization-code":
@@ -85,11 +99,11 @@ func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc, 
 		// make a new context child for each tabs
 		// update ctx to the current context of the new instance
 		newCtx, newCancel := chromedp.NewContext(currCtx)
-		checks.Checks[i].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType, promptFlag)
+		checks[i].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType, promptFlag)
 		currCtx = newCtx
 
 		// append pointer to the check to our list
-		ChecksList = append(ChecksList, &checks.Checks[i])
+		ChecksList = append(ChecksList, &checks[i])
 	}
 
 }
@@ -139,6 +153,7 @@ func WriteResults(outfile string) {
 		if c.State != SKIP {
 			c.SkipReason = ""
 		}
+
 		bslice, err := json.Marshal(c)
 		if err != nil {
 			log.Fatalf("Could not Marshal to JSON for Check %s\n", c.CheckName)
@@ -207,28 +222,51 @@ func (c *Check) RunCheck() (State, error) {
 	var err error
 	switch c.FlowType {
 	case "authorization-code":
-		// TODO
-		// deleteRequiredExchangeParams()
-		// addTokenExchangeParams()
+		c.AddDefaultExchangeParams()
+		deleteRequiredExchangeParams(c.TokenExchangeParams, c.DeleteTokenExchangeParams)
+		addTokenExchangeParams(c.TokenExchangeParams, c.TokenExchangeExtraParams)
 		err = fi.DoAuthorizationRequest()
-		// exchange
+		if fi.RedirectedToURL.String() != "" {
+			return FAIL, nil
+		}
+		if err != nil {
+			return WARN, err
+		}
+
+		redirectedTo := fi.RedirectedToURL
+		authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE)
+		// set authorization code from redirect uri
+		c.TokenExchangeParams[oauth.AUTHORIZATION_CODE] = []string{authorizationCode}
+
+		// perform exchange
+		tok, err := fi.Exchange(context.TODO(), c.TokenExchangeParams)
+		if err != nil {
+			return WARN, err
+		}
+		if err == nil && len(tok.AccessToken) > 0 {
+			return PASS, nil
+		}
+
+		return FAIL, nil
+
 	case "implicit":
 		err = fi.DoAuthorizationRequest()
+		// this will only be set with a value
+		// if we were redirected to the provided redirect_uri
+		// therefore, if this is not empty, we were redirected
+		// to the malicious URI
+		if fi.RedirectedToURL.String() != "" {
+			return FAIL, nil
+		}
+
+		if err != nil {
+			return WARN, err
+		}
+		return PASS, nil
 	}
 
-	// this will only be set with a value
-	// if we were redirected to the provided redirect_uri
-	// therefore, if this is not empty, we were redirected
-	// to the malicious URI
-	if fi.RedirectedToURL.String() != "" {
-		return FAIL, nil
-	}
-
-	if err != nil {
-		return WARN, err
-	}
-	return PASS, nil
-
+	// should never get here
+	return WARN, errors.New("Something went wrong")
 }
 
 // Chrome checks if implicit flow tests pass by if we are redirected
@@ -252,7 +290,7 @@ func (c *Check) setExpectedRedirectUri() {
 		redirectUriStr := oauth.GetQueryParameterFirst(ur, oauth.REDIRECT_URI)
 		redirectUri, err := url.Parse(redirectUriStr)
 		if err != nil {
-			log.Fatalf("Bad redirect_uri param")
+			log.Fatalf("Bad redirect_uri param\n")
 		}
 		c.FlowInstance.ProvidedRedirectURL = redirectUri
 	}
@@ -279,12 +317,27 @@ func deleteRequiredParams(authzUrl *url.URL, p []string) {
 	}
 }
 
-func addTokenExchangeParams(authzUrl *url.URL, pm map[string][]string) {
-	// TODO
-	// likely need to call oauth2's internal.RetrieveToken directly for this
+func (c *Check) AddDefaultExchangeParams() {
+	v := url.Values{
+		"grant_type":   {"authorization_code"},
+		"redirect_uri": {c.FlowInstance.AuthorizationURL.String()},
+	}
+	c.TokenExchangeParams = v
+
 }
 
-func deleteRequiredExchangeParams(authzUrl *url.URL, p []string) {
-	// TODO
-	//internal.RetrieveToken
+func addTokenExchangeParams(v url.Values, pm map[string][]string) {
+	for key, values := range pm {
+		if len(v[key]) == 0 {
+			v[key] = values
+		} else {
+			v[key] = append(v[key], values...)
+		}
+	}
+}
+
+func deleteRequiredExchangeParams(v url.Values, p []string) {
+	for _, d := range p {
+		delete(v, d)
+	}
 }

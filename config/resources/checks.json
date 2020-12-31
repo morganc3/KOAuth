@@ -1,75 +1,73 @@
-{
-    "checks": [
-        {
-            "name":"redirect-uri-total-change",
-            "risk":"high",
-            "description":"Completely alters the redirect URI",
-            "flowType":"implicit",
-            "references":"",
-            "authURLParams":{"redirect_uri":["https://maliciousdomain.h0.gs"]},
-            "deleteURLParams":["redirect_uri"]
-        },
-        {
-            "name":"redirect-uri-add-subdomain",
-            "risk":"high",
-            "description":"Adds a subdomain to redirect_uri",
-            "flowType":"implicit",
-            "references":"",
-            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://maliciousdomain.{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]},
-            "deleteURLParams":["redirect_uri"]
-        },
-        {
-            "name":"redirect-uri-scheme-downgrade",
-            "risk":"high",
-            "description":"Downgrades scheme of redirect URI from HTTPS to HTTP",
-            "skipReason":"This check was skipped because the proper redirect URI did not use the HTTPS scheme",
-            "flowType":"implicit",
-            "references":"",
-            "authURLParams":{"redirect_uri":["http://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]}, 
-            "deleteURLParams":["redirect_uri"]
-        },
-        {
-            "name":"redirect-uri-total-path-change",
-            "risk":"medium",
-            "description":"Changes the path of the redirect URI",
-            "flowType":"implicit",
-            "references":"",
-            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}/maliciouspath"]}, 
-            "deleteURLParams":["redirect_uri"]
-        },
-        {
-            "name":"redirect-uri-path-append",
-            "risk":"medium",
-            "description":"Appends to the redirect_uri path",
-            "flowType":"implicit",
-            "references":"",
-            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}/maliciousaddition"]}, 
-            "deleteURLParams":["redirect_uri"]
-        },
-        {
-            "name":"redirect-uri-two-provided-redirect-uris",
-            "risk":"medium",
-            "description":"Two redirect uri's were provided, one is correct and one is incorrect. Ensure we are not redirected to the incorrect URI.",
-            "flowType":"implicit",
-            "references":"",
-            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"]},
-            "waitForRedirectTo":"{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"
-        },
-        {
-            "name":"redirect-uri-improper-parsing",
-            "risk":"high",
-            "description":"Attempt to trick redirect URI parse using \"@\"",
-            "flowType":"implicit",
-            "references":"",
-            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}@malicious.h0.gs"]},
-            "waitForRedirectTo":"https://malicious.h0.gs"
-        },
-        {
-            "name":"state-supported",
-            "risk":"medium",
-            "description":"Check if the OAuth state parameter is supported",
-            "flowType":"authorization-code",
-            "references":""
-        }
-    ]
-}
+[
+    {
+        "name":"redirect-uri-total-change",
+        "risk":"high",
+        "description":"Completely alters the redirect URI",
+        "flowType":"implicit",
+        "references":"",
+        "authURLParams":{"redirect_uri":["https://maliciousdomain.h0.gs"]},
+        "deleteURLParams":["redirect_uri"]
+    },
+    {
+        "name":"redirect-uri-add-subdomain",
+        "risk":"high",
+        "description":"Adds a subdomain to redirect_uri",
+        "flowType":"implicit",
+        "references":"",
+        "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://maliciousdomain.{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]},
+        "deleteURLParams":["redirect_uri"]
+    },
+    {
+        "name":"redirect-uri-scheme-downgrade",
+        "risk":"high",
+        "description":"Downgrades scheme of redirect URI from HTTPS to HTTP",
+        "skipReason":"This check was skipped because the proper redirect URI did not use the HTTPS scheme",
+        "flowType":"implicit",
+        "references":"",
+        "authURLParams":{"redirect_uri":["http://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]}, 
+        "deleteURLParams":["redirect_uri"]
+    },
+    {
+        "name":"redirect-uri-total-path-change",
+        "risk":"medium",
+        "description":"Changes the path of the redirect URI",
+        "flowType":"implicit",
+        "references":"",
+        "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}/maliciouspath"]}, 
+        "deleteURLParams":["redirect_uri"]
+    },
+    {
+        "name":"redirect-uri-path-append",
+        "risk":"medium",
+        "description":"Appends to the redirect_uri path",
+        "flowType":"implicit",
+        "references":"",
+        "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}/maliciousaddition"]}, 
+        "deleteURLParams":["redirect_uri"]
+    },
+    {
+        "name":"redirect-uri-two-provided-redirect-uris",
+        "risk":"medium",
+        "description":"Two redirect uri's were provided, one is correct and one is incorrect. Ensure we are not redirected to the incorrect URI.",
+        "flowType":"implicit",
+        "references":"",
+        "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"]},
+        "waitForRedirectTo":"{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"
+    },
+    {
+        "name":"redirect-uri-improper-parsing",
+        "risk":"high",
+        "description":"Attempt to trick redirect URI parse using \"@\"",
+        "flowType":"implicit",
+        "references":"",
+        "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}@malicious.h0.gs"]},
+        "waitForRedirectTo":"https://malicious.h0.gs"
+    },
+    {
+        "name":"state-supported",
+        "risk":"medium",
+        "description":"Check if the OAuth state parameter is supported",
+        "flowType":"authorization-code",
+        "references":""
+    }
+]

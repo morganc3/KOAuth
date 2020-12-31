@@ -20,6 +20,7 @@ func Execute() {
 	userAgent := flag.String("user-agent", `Chrome`, "User-Agent Header for Chrome")
 	timeout := flag.Int("timeout", 4, "Timeout for waiting for OAuth redirects to redirect_uri")
 	PromptFlag := flag.String("prompt", "none", "Value of \"prompt\" parameter in authorization request. If the authorization server does\n\t\t not support prompt=none, it should be set to \"login\" or \"select_account\". If the pressence of the prompt parameter\n\t\t breaks the flow, set to this flag to the string \"DONT_SEND\" and it will not be sent.")
+	ClientAuth := flag.String("client-auth", "auto", "Client Authentication Method: \"BASIC\", \"BODY\", or \"auto\", to indicate if client ID and client secret\n\t\t should be sent in an HTTP Basic authentication header or in the POST body, or should be auto detected.")
 	flag.Parse()
 
 	oauth.FLOW_TIMEOUT_SECONDS = time.Duration(*timeout)
@@ -45,7 +46,7 @@ func Execute() {
 	oauth.ChromeExecContextCancel = cancel
 	defer cancel()
 
-	config.Config = config.NewConfig(*configFile)
+	config.Config = config.NewConfig(*configFile, *ClientAuth)
 
 	// first tab's context and CancelFunc
 	// this will be the first window, which

@@ -5,3 +5,5 @@ discord_c.json
 KOAuth
 node_modules/
 output.json
+config/resources/checks2.json
+curltest
