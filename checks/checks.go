@@ -3,11 +3,9 @@ package checks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/url"
 
 	"github.com/chromedp/chromedp"
 	"github.com/morganc3/KOAuth/config"
@@ -37,28 +35,7 @@ type Check struct {
 	RiskRating  string `json:"risk"`
 	Description string `json:"description"`
 	SkipReason  string `json:"skipReason,omitempty"`
-	FlowType    string `json:"flowType"`
 	References  string `json:"references,omitempty"`
-
-	// Extra parameters to be added to Auth URL
-	AuthURLParams map[string][]string `json:"authUrlParams,omitempty"`
-
-	// Default parameters that should be deleted prior to browsing to Auth URL
-	DeleteAuthURLParams []string `json:"deleteUrlParams,omitempty"`
-
-	// Not taken as input, default params required for the code exchange
-	TokenExchangeParams url.Values `json:"-"`
-
-	// Extra parameters to be added to the code exchange
-	TokenExchangeExtraParams map[string][]string `json:"tokenExchangeExtraParams,omitempty"`
-
-	// Default parameters that should be deleted prior to code exchange
-	DeleteTokenExchangeParams []string `json:"deleteExchangeParams,omitempty"`
-
-	// URL to wait to be redirected to. If redirected here, the check "fails"
-	WaitForRedirectTo string              `json:"waitForRedirectTo,omitempty"`
-	FlowInstance      *oauth.FlowInstance `json:"-"`
-	CheckFunc         CheckFunction       `json:"-"`
 
 	// Output message giving information about why the check failed
 	FailMessage string `json:"-"`
@@ -66,6 +43,11 @@ type Check struct {
 	// Output message giving information about an error that occurred during
 	// the check
 	ErrorMessage string `json:"errorMessage,omitempty"`
+
+	// Custom defined check function
+	CheckFunc CheckFunction `json:"-"`
+
+	Steps []Step `json:"steps,omitempty"`
 
 	// State contains result of the check
 	State `json:"-"`
@@ -85,22 +67,23 @@ func Init(checkJSONFile string, ctx context.Context, cancel context.CancelFunc, 
 
 	currCtx := ctx
 	for i, c := range checks {
-		checks[i].CheckFunc = getMapping(c.CheckName)
-		var responseType oauth.FlowType
-		switch c.FlowType {
-		case "authorization-code":
-			responseType = oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
-		case "implicit":
-			responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
-		default:
-			log.Fatalf("Invalid flow type given for check %s", c.CheckName)
+		for j, s := range c.Steps {
+			var responseType oauth.FlowType
+			switch s.FlowType {
+			case "authorization-code":
+				responseType = oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
+			case "implicit":
+				responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
+			default:
+				log.Fatalf("Invalid flow type given for check %s", c.CheckName)
+			}
+			// make a new context child for each tabs
+			// update ctx to the current context of the new instance
+			newCtx, newCancel := chromedp.NewContext(currCtx)
+			checks[i].Steps[j].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType, promptFlag)
+			currCtx = newCtx
 		}
-
-		// make a new context child for each tabs
-		// update ctx to the current context of the new instance
-		newCtx, newCancel := chromedp.NewContext(currCtx)
-		checks[i].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType, promptFlag)
-		currCtx = newCtx
+		checks[i].CheckFunc = getMapping(c.CheckName)
 
 		// append pointer to the check to our list
 		ChecksList = append(ChecksList, &checks[i])
@@ -113,9 +96,10 @@ func (c *Check) DoCheck() {
 	var state State
 	var err error
 	if c.CheckFunc != nil {
-		state, err = c.CheckFunc(c.FlowInstance)
+		// TODO: fix now that we're using steps
+		// state, err = c.CheckFunc(c.FlowInstance)
 	} else {
-		state, err = c.RunCheck()
+		state = c.RunCheck()
 	}
 	c.State = state
 	if err != nil {
@@ -140,6 +124,7 @@ func WriteResults(outfile string) {
 		References   string `json:"references,omitempty"`
 		FailMessage  string `json:"failMessage,omitempty"`
 		ErrorMessage string `json:"errorMessage,omitempty"`
+		Steps        []Step `json:"steps,omitempty"`
 		State        `json:"state"`
 	}
 
@@ -203,149 +188,24 @@ func PrintResults() {
 // TODO: There should be error checking here for
 // different errors, such as if we get an "error" URL parameter
 // returned in redirect URI, or if there is an internal error
-func (c *Check) RunCheck() (State, error) {
+func (c *Check) RunCheck() State {
 	// TODO check if should skip the check
 	// documentation should be added to say if a check in some cases should be
 	// skipped, we should add a skipMessage in checks.json and a skipfunction
 	// to detect if it should be skipped
-	fi := c.FlowInstance
-	authzUrl := fi.AuthorizationURL
 
-	// first delete any "required" auth URL parameters that we have specfically
-	// defined in the check to be deleted
-	deleteRequiredParams(authzUrl, c.DeleteAuthURLParams)
-
-	// now, add additional URL parameters defined in the check
-	addAuthURLParams(authzUrl, c.AuthURLParams)
-
-	// set the redirect_uri value we will wait to be redirected to
-	// if none was provided, this will default to the value in the redirect_uri URL parameter
-	c.setExpectedRedirectUri()
-
-	var err error
-	switch c.FlowType {
-	case "authorization-code":
-		c.AddDefaultExchangeParams()
-		deleteRequiredExchangeParams(c.TokenExchangeParams, c.DeleteTokenExchangeParams)
-		addTokenExchangeParams(c.TokenExchangeParams, c.TokenExchangeExtraParams)
-		err = fi.DoAuthorizationRequest()
-		if err != nil {
-			return WARN, err
+	for i, step := range c.Steps {
+		state, _ := step.runStep()
+		c.Steps[i].State = state
+		if step.State == PASS && step.RequiredOutcome == OUTCOME_SUCCEED {
+			continue
+		}
+		if step.State != PASS && step.RequiredOutcome == OUTCOME_FAIL {
+			continue
 		}
 
-		// if we were not redirected
-		if fi.RedirectedToURL.String() == "" {
-			return WARN, errors.New("Was not redirected during authorization code flow check")
-		}
-
-		redirectedTo := fi.RedirectedToURL
-		authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE)
-		// set authorization code from redirect uri
-		c.TokenExchangeParams[oauth.AUTHORIZATION_CODE] = []string{authorizationCode}
-
-		// perform exchange
-		tok, err := fi.Exchange(context.TODO(), c.TokenExchangeParams)
-
-		if err != nil {
-			return WARN, err
-		}
-		if err == nil && len(tok.AccessToken) > 0 {
-			return PASS, nil
-		}
-
-		return FAIL, nil
-
-	case "implicit":
-		err = fi.DoAuthorizationRequest()
-		// this will only be set with a value
-		// if we were redirected to the provided redirect_uri
-		// therefore, if this is not empty, we were redirected
-		// to the malicious URI
-		if err != nil {
-			return WARN, err
-		}
-
-		// if we were redirected
-		if fi.RedirectedToURL.String() != "" {
-			return FAIL, nil
-		}
-
-		return PASS, nil
+		// Check failed
+		return FAIL
 	}
-
-	// should never get here
-	return WARN, errors.New("Something went wrong")
-}
-
-// Chrome checks if implicit flow tests pass by if we are redirected
-// to the expected redirect URI without an error. This sets
-// which redirect URI we should be waiting to be redirected to.
-func (c *Check) setExpectedRedirectUri() {
-	if len(c.WaitForRedirectTo) > 0 {
-		// if we have specifically set the parameter in checks.json
-		// to have a URL we are waiting to be redirected to
-		// this is useful for cases where, for example, we provide
-		// two redirect_uri parameters (one valid and one invalid) as part of a test.
-		maliciousRedirectURI, err := url.Parse(c.WaitForRedirectTo)
-		if err != nil {
-			log.Fatalf("Bad WaitForRedirectTo value\n")
-		}
-		c.FlowInstance.ProvidedRedirectURL = maliciousRedirectURI
-	} else {
-		ur := c.FlowInstance.AuthorizationURL
-		// addAuthURLPArams() is called before this, so we can search for the
-		// redirect_uri parameter in the URL in the normal case
-		redirectUriStr := oauth.GetQueryParameterFirst(ur, oauth.REDIRECT_URI)
-		redirectUri, err := url.Parse(redirectUriStr)
-		if err != nil {
-			log.Fatalf("Bad redirect_uri param\n")
-		}
-		c.FlowInstance.ProvidedRedirectURL = redirectUri
-	}
-}
-
-// Add URL parameter to authorization URL. If the parameter already
-// exists in the URL, this will add an additional.
-func addAuthURLParams(authzUrl *url.URL, pm map[string][]string) {
-	for key, values := range pm {
-		for _, v := range values {
-			oauth.AddQueryParameter(authzUrl, key, v)
-		}
-	}
-}
-
-// Delete required parameters that are
-// specified to be manually deleted. Parameters should always
-// be deleted before new ones are added.
-// The following parameters are required and would need
-// to be deleted if desired: state, redirect_uri, client_id, scope, response_type
-func deleteRequiredParams(authzUrl *url.URL, p []string) {
-	for _, d := range p {
-		oauth.DelQueryParameter(authzUrl, d)
-	}
-}
-
-func (c *Check) AddDefaultExchangeParams() {
-	v := url.Values{
-		"grant_type":   {"authorization_code"},
-		"redirect_uri": {c.FlowInstance.ProvidedRedirectURL.String()},
-	}
-	c.TokenExchangeParams = v
-
-}
-
-func addTokenExchangeParams(v url.Values, pm map[string][]string) {
-	for key, values := range pm {
-		if len(v[key]) == 0 {
-			v[key] = values
-		} else {
-			v[key] = append(v[key], values...)
-		}
-	}
-}
-
-func deleteRequiredExchangeParams(v url.Values, p []string) {
-	for _, d := range p {
-		delete(v, d)
-	}
+	return PASS
 }
