@@ -98,6 +98,8 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 
 }
 
+// Same as Exchange() from https://github.com/golang/oauth2 but
+// takes arbitrary url values
 func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Token, error) {
 	return oauth2.RetrieveToken(ctx, &config.Config.OAuthConfig, v)
 }
