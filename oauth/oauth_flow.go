@@ -65,6 +65,7 @@ func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType, pro
 		Cancel:              cancel,
 	}
 	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value", promptFlag)
+
 	return &flowInstance
 }
 
@@ -74,7 +75,6 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 	urlString := i.AuthorizationURL.String()
 
 	actions = append(actions, chromedp.Navigate(urlString))
-
 	// adds listener which will cancel the context
 	// if a redirect to redirect_uri occurs
 	ch := WaitRedirect(i.Ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)

@@ -200,6 +200,9 @@ func PrintResults() {
 
 // Changes redirect URI, checks if we are still redirected
 
+// TODO: There should be error checking here for
+// different errors, such as if we get an "error" URL parameter
+// returned in redirect URI, or if there is an internal error
 func (c *Check) RunCheck() (State, error) {
 	// TODO check if should skip the check
 	// documentation should be added to say if a check in some cases should be
@@ -226,11 +229,13 @@ func (c *Check) RunCheck() (State, error) {
 		deleteRequiredExchangeParams(c.TokenExchangeParams, c.DeleteTokenExchangeParams)
 		addTokenExchangeParams(c.TokenExchangeParams, c.TokenExchangeExtraParams)
 		err = fi.DoAuthorizationRequest()
-		if fi.RedirectedToURL.String() != "" {
-			return FAIL, nil
-		}
 		if err != nil {
 			return WARN, err
+		}
+
+		// if we were not redirected
+		if fi.RedirectedToURL.String() == "" {
+			return WARN, errors.New("Was not redirected during authorization code flow check")
 		}
 
 		redirectedTo := fi.RedirectedToURL
@@ -240,6 +245,7 @@ func (c *Check) RunCheck() (State, error) {
 
 		// perform exchange
 		tok, err := fi.Exchange(context.TODO(), c.TokenExchangeParams)
+
 		if err != nil {
 			return WARN, err
 		}
@@ -255,13 +261,15 @@ func (c *Check) RunCheck() (State, error) {
 		// if we were redirected to the provided redirect_uri
 		// therefore, if this is not empty, we were redirected
 		// to the malicious URI
+		if err != nil {
+			return WARN, err
+		}
+
+		// if we were redirected
 		if fi.RedirectedToURL.String() != "" {
 			return FAIL, nil
 		}
 
-		if err != nil {
-			return WARN, err
-		}
 		return PASS, nil
 	}
 
@@ -320,7 +328,7 @@ func deleteRequiredParams(authzUrl *url.URL, p []string) {
 func (c *Check) AddDefaultExchangeParams() {
 	v := url.Values{
 		"grant_type":   {"authorization_code"},
-		"redirect_uri": {c.FlowInstance.AuthorizationURL.String()},
+		"redirect_uri": {c.FlowInstance.ProvidedRedirectURL.String()},
 	}
 	c.TokenExchangeParams = v
 
