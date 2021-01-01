@@ -3,6 +3,7 @@ package checks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/url"
 
@@ -11,7 +12,7 @@ import (
 
 const (
 	OUTCOME_FAIL    = "FAIL"
-	OUTCOME_SUCCEED = "PASS"
+	OUTCOME_SUCCEED = "SUCCEED"
 )
 
 type Step struct {
@@ -34,6 +35,12 @@ type Step struct {
 
 	// URL to wait to be redirected to
 	WaitForRedirectTo string `json:"waitForRedirectTo,omitempty"`
+
+	// URL Parameters that must be in URL we are redirected to
+	RedirectMustContainUrl map[string][]string `json:"redirectMustContainUrl,omitempty"`
+
+	// Fragment Parameters that must be in URL we are redirected to
+	RedirectMustContainFragment map[string][]string `json:"redirectMustContainFragment,omitempty"`
 
 	FailMessage  string `json:"failMessage,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
@@ -75,11 +82,16 @@ func (s *Step) runStep() (State, error) {
 
 		// if we were not redirected
 		if fi.RedirectedToURL.String() == "" {
-			s.FailMessage = "Was not redirected during authorization code flow check"
+			s.FailMessage = "Was not redirected during authorization code flow"
 			return FAIL, nil
 		}
 
 		redirectedTo := fi.RedirectedToURL
+		ok, err := s.requiredRedirectParamsPresent(redirectedTo)
+		if !ok || err != nil {
+			s.ErrorMessage = err.Error()
+			return WARN, err
+		}
 
 		authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE)
 
@@ -109,9 +121,17 @@ func (s *Step) runStep() (State, error) {
 			return WARN, err
 		}
 
-		// if we were redirected
-		if fi.RedirectedToURL.String() != "" {
+		redirectedTo := fi.RedirectedToURL
+		// if we were not redirected
+		if redirectedTo.String() == "" {
+			s.FailMessage = "Was not redirected during implicit flow"
 			return FAIL, nil
+		}
+
+		ok, err := s.requiredRedirectParamsPresent(redirectedTo)
+		if !ok || err != nil {
+			s.ErrorMessage = err.Error()
+			return WARN, err
 		}
 
 		return PASS, nil
@@ -193,4 +213,45 @@ func deleteRequiredExchangeParams(v url.Values, p []string) {
 	for _, d := range p {
 		delete(v, d)
 	}
+}
+
+// Checks if the URL we were redirected to contains the
+// parameters defined in the step that it must contain
+// Checks RedirectMustContainFragment for implicit flow and
+// RedirectMustContainUrl for authorization code flow
+func (s *Step) requiredRedirectParamsPresent(redirectedTo *url.URL) (bool, error) {
+	var getParamFunc func(*url.URL, string) []string
+	var requiredParams map[string][]string
+	switch s.FlowType {
+	case "authorization-code":
+		// If authz code flow, look at query params
+		getParamFunc = oauth.GetQueryParameterAll
+		requiredParams = s.RedirectMustContainUrl
+	case "implicit":
+		// If implicit flow, look at fragment params (parameters after "#")
+		getParamFunc = oauth.GetFragmentParameterAll
+		requiredParams = s.RedirectMustContainFragment
+	case "default":
+		return false, errors.New("Bad flow type")
+	}
+
+	for key, values := range requiredParams {
+		redirectUrlVals := getParamFunc(redirectedTo, key)
+		for _, v := range values {
+			if !sliceContains(redirectUrlVals, v) {
+				return false, errors.New(fmt.Sprintf("Missing value %s for key %s.\n", v, key))
+			}
+		}
+	}
+	return true, nil
+}
+
+// checks if slice of strings contains given string
+func sliceContains(list []string, element string) bool {
+	for _, item := range list {
+		if item == element {
+			return true
+		}
+	}
+	return false
 }

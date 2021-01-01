@@ -14,7 +14,7 @@ import (
 // TODO: add support for setting "prompt" param for checks
 func Execute() {
 	configFile := flag.String("config", "config.json", "config file name")
-	checkFile := flag.String("checks", "./config/resources/checks.json", "checks file name")
+	checkFile := flag.String("checks", "./checks/resources/checks.json", "checks file name")
 	outFile := flag.String("outfile", "output.json", "results output file")
 	proxy := flag.String("proxy", "", "HTTP Proxy <ip>:<port>")
 	userAgent := flag.String("user-agent", `Chrome`, "User-Agent Header for Chrome")

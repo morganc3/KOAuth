@@ -16,6 +16,12 @@ import (
 func initSession() (context.Context, context.CancelFunc) {
 	ctx, cancel := chromedp.NewContext(oauth.ChromeExecContext)
 	// We should be prompted for auth as this is our first request
+
+	// TODO: some servers might not support implicit flow
+	// for initializing/authenticating, we should probably at minimum
+	// allow the option to do authorization code flow here in case
+	// implicit flow will cause an immediate error. Otherwise, can simply
+	// provide a url to authenticate to
 	i := oauth.NewInstance(ctx, cancel, oauth.IMPLICIT_FLOW_RESPONSE_TYPE, "DONT_SEND")
 
 	urlString := i.AuthorizationURL.String()

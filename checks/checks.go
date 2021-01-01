@@ -197,10 +197,10 @@ func (c *Check) RunCheck() State {
 	for i, step := range c.Steps {
 		state, _ := step.runStep()
 		c.Steps[i].State = state
-		if step.State == PASS && step.RequiredOutcome == OUTCOME_SUCCEED {
+		if state == PASS && step.RequiredOutcome == OUTCOME_SUCCEED {
 			continue
 		}
-		if step.State != PASS && step.RequiredOutcome == OUTCOME_FAIL {
+		if state != PASS && step.RequiredOutcome == OUTCOME_FAIL {
 			continue
 		}
 

@@ -1,9 +1,0 @@
-[
-    {
-        "name":"pkce-supported",
-        "risk":"medium",
-        "description":"Checks if PKCE is supported",
-        "flowType":"authorization-code",
-        "references":""
-    }
-]

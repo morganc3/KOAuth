@@ -7,9 +7,7 @@ var Mappings map[string]CheckFunction
 // for checks that can't be accomplished with the
 // simple model defined in our checks.json structure/templating
 func getMappings() map[string]CheckFunction {
-	return map[string]CheckFunction{
-		"state-supported": StateSupported,
-	}
+	return map[string]CheckFunction{}
 }
 
 func getMapping(name string) CheckFunction {
