@@ -54,7 +54,7 @@ func Execute() {
 	fctx, fctxCancel := initSession()
 	defer fctxCancel()
 
-	checks.Init(*checkFile, fctx, fctxCancel, *PromptFlag)
+	checks.Init(*checkFile, fctx, *PromptFlag)
 	checks.DoChecks()
 	checks.PrintResults()
 	checks.WriteResults(*outFile)
