@@ -38,13 +38,60 @@ below:
 
 ```
 {
-    "name":"redirect-uri-total-change",
-    "risk":"high",
-    "description":"Completely alters the redirect URI",
-    "flowType":"implicit",
+    "name":"redirect-uri-add-subdomain",
+    "risk":"medium",
+    "description":"Adds a subdomain to redirect_uri",
+    "requiresSupport":["implicit-flow-supported"],
     "references":"",
-    "authURLParams":{"redirect_uri":["https://maliciousdomain.h0.gs"]},
-    "deleteURLParams":["redirect_uri"]
+    "steps": [
+        {
+            "flowType":"implicit",
+            "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://maliciousdomain.{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]},
+            "deleteURLParams":["redirect_uri"],
+            "requiredOutcome": "FAIL"
+        }
+    ]
+}
+```
+
+In the above check, the default `redirect_uri` from the provided config file is replaced with the same `redirecturi`, 
+but with an additional subdomain added. This check also depends on the implicit flow being supported ("requiresSupport":["implicit-flow-supported"]). The "requiredOutcome" of this step is that it fails, meaning the OAuth flow fails, 
+and thus the check passes (we were not redirected to the malicious domain). 
+
+Another example check is shown below, which determines if PKCE is supported:
+
+```
+{
+    "name":"pkce-supported",
+    "risk":"medium",
+    "description":"Checks if PKCE is supported",
+    "references":"",
+    "steps": [
+        {
+            "flowType":"authorization-code",
+            "references":"",
+            "authURLParams":{
+                "code_challenge":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"],
+                "code_challenge_method":["S256"]
+            },
+            "tokenExchangeExtraParams":{
+                "code_verifier":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
+            },
+            "requiredOutcome": "SUCCEED"
+        },
+        {
+            "flowType":"authorization-code",
+            "references":"",
+            "authURLParams":{
+                "code_challenge":["q6IBwbTBNQdLVSKVzs06m7R8dJGXyUBtKHZSz3o3jW4="],
+                "code_challenge_method":["S256"]
+            },
+            "tokenExchangeExtraParams":{
+                "code_verifier":["bad-verifier"]
+            },
+            "requiredOutcome": "FAIL"
+        }
+    ]
 }
 ```
 

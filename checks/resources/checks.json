@@ -117,7 +117,7 @@
         },
         {
             "name":"redirect-uri-add-subdomain",
-            "risk":"high",
+            "risk":"medium",
             "description":"Adds a subdomain to redirect_uri",
             "requiresSupport":["implicit-flow-supported"],
             "references":"",
