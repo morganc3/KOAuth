@@ -231,7 +231,7 @@ func (s *Step) requiredRedirectParamsPresent(redirectedTo *url.URL) (bool, error
 		// If implicit flow, look at fragment params (parameters after "#")
 		getParamFunc = oauth.GetFragmentParameterAll
 		requiredParams = s.RedirectMustContainFragment
-	case "default":
+	default:
 		return false, errors.New("Bad flow type")
 	}
 

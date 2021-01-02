@@ -114,7 +114,7 @@ func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state, prompt
 
 	switch promptFlag {
 	case "DONT_SEND":
-	case "default":
+	default:
 		SetQueryParameter(URL, "prompt", promptFlag)
 	}
 
