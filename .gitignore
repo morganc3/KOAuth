@@ -3,6 +3,7 @@ session.json
 discord_s.json
 discord_c.json
 KOAuth
+KOAuth.exe
 node_modules/
 output.json
 config/resources/checks2.json
