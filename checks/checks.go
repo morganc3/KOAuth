@@ -174,7 +174,7 @@ func (c *Check) RunCheck() State {
 
 	for i, step := range c.Steps {
 		state, _ := step.runStep()
-		c.Steps[i].State = state
+		c.Steps[i] = step
 		if state == PASS && step.RequiredOutcome == OUTCOME_SUCCEED {
 			continue
 		}
