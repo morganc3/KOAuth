@@ -2,7 +2,7 @@ config*.json
 session.json
 KOAuth
 KOAuth.exe
-node_modules/
+testingconfigs/*
 output.json
 config/resources/checks2.json
 curltest
