@@ -1,7 +1,5 @@
-config.json
+config*.json
 session.json
-discord_s.json
-discord_c.json
 KOAuth
 KOAuth.exe
 node_modules/
