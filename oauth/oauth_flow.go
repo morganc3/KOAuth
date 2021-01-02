@@ -138,7 +138,7 @@ func GetImplicitAccessTokenFromURL(urlString string) string {
 func randStr(len int) string {
 	buff := make([]byte, len)
 	rand.Read(buff)
-	str := base64.StdEncoding.EncodeToString(buff)
+	str := base64.URLEncoding.EncodeToString(buff)
 	// Base 64 can be longer than len
 	return str[:len]
 }
