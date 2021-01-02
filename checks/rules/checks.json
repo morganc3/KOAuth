@@ -116,6 +116,21 @@
             ]
         },
         {
+            "name":"redirect-uri-add-higher-domain",
+            "risk":"medium",
+            "description":"Adds a higher level domain to redirect_uri",
+            "requiresSupport":["implicit-flow-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"implicit",
+                    "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}.maliciousdomain.com{{{REDIRECT_PATH}}}"]},
+                    "deleteURLParams":["redirect_uri"],
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
             "name":"redirect-uri-add-subdomain",
             "risk":"medium",
             "description":"Adds a subdomain to redirect_uri",
@@ -204,6 +219,86 @@
                     "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}@malicious.h0.gs"]},
                     "deleteURLParams":["redirect_uri"],
                     "waitForRedirectTo":"https://malicious.h0.gs",
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
+            "name":"pkce-downgrade",
+            "risk":"medium",
+            "description":"Attempts to downgrade from PKCE, by never sending the code_verifier in the exchange request",
+            "requiresSupport":["pkce-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"authorization-code",
+                    "references":"",
+                    "authURLParams":{
+                        "code_challenge":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"],
+                        "code_challenge_method":["S256"]
+                    },
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
+            "name":"pkce-downgrade-to-plain",
+            "risk":"medium",
+            "description":"Attempts to send same value for code_challenge and code_verifier (downgrade from S256 to plain)",
+            "requiresSupport":["pkce-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"authorization-code",
+                    "references":"",
+                    "authURLParams":{
+                        "code_challenge":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"],
+                        "code_challenge_method":["S256"]
+                    },
+                    "tokenExchangeExtraParams":{
+                        "code_verifier":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"]
+                    },
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
+            "name":"pkce-plain-supported1",
+            "risk":"medium",
+            "description":"Checks if code_challenge_method of \"plain\" is supported",
+            "requiresSupport":["pkce-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"authorization-code",
+                    "references":"",
+                    "authURLParams":{
+                        "code_challenge":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"],
+                        "code_challenge_method":["plain"]
+                    },
+                    "tokenExchangeExtraParams":{
+                        "code_verifier":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
+                    },
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
+            "name":"pkce-plain-supported2",
+            "risk":"medium",
+            "description":"Checks if code_challenge_method of \"plain\" is supported",
+            "requiresSupport":["pkce-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"authorization-code",
+                    "references":"",
+                    "authURLParams":{
+                        "code_challenge":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
+                    },
+                    "tokenExchangeExtraParams":{
+                        "code_verifier":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
+                    },
                     "requiredOutcome": "FAIL"
                 }
             ]

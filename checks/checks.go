@@ -145,15 +145,10 @@ func PrintResults() {
 	}
 }
 
+// TODO: checks for things like redirect should be able to use either implicit or authz.
+
 // TODO checks:
-// make sure waitForRedirectTo checks are good
-// think about if get params are being dealt with properly
-// Do we need to check path if domain is different
-
-// add higher level domain
-
 // iframes allowed at consent url
-// state not supported
 
 // pkce only supported for implicit
 // pkce downgrade sha256 -> plain
