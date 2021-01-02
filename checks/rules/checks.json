@@ -224,6 +224,36 @@
             ]
         },
         {
+            "name":"redirect-uri-changed-to-localhost",
+            "risk":"low",
+            "description":"Checks if the server allows redirects to localhost, which is often enabled for debugging purposes",
+            "requiresSupport":["implicit-flow-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"implicit",
+                    "authURLParams":{"redirect_uri":["http://localhost"]},
+                    "deleteURLParams":["redirect_uri"],
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
+            "name":"redirect-uri-contains-localhost",
+            "risk":"high",
+            "description":"Checks if the server allows redirects to a domain containing localhost",
+            "requiresSupport":["implicit-flow-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"implicit",
+                    "authURLParams":{"redirect_uri":["http://localhost.malicious.com"]},
+                    "deleteURLParams":["redirect_uri"],
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
             "name":"pkce-downgrade",
             "risk":"medium",
             "description":"Attempts to downgrade from PKCE, by never sending the code_verifier in the exchange request",
