@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/chromedp/chromedp"
 	"github.com/morganc3/KOAuth/config"
@@ -162,7 +163,7 @@ func PrintResults() {
 // different errors, such as if we get an "error" URL parameter
 // returned in redirect URI, or if there is an internal error
 func (c *Check) RunCheck() State {
-	// TODO check if should skip the check
+	// TODO check if check should be skipped
 	// documentation should be added to say if a check in some cases should be
 	// skipped, we should add a skipMessage in checks.json and a skipfunction
 	// to detect if it should be skipped
@@ -174,6 +175,7 @@ func (c *Check) RunCheck() State {
 
 	for i, step := range c.Steps {
 		state, _ := step.runStep()
+		step.State = state
 		c.Steps[i] = step
 		if state == PASS && step.RequiredOutcome == OUTCOME_SUCCEED {
 			continue
@@ -190,16 +192,67 @@ func (c *Check) RunCheck() State {
 
 // Checks if required support checks passed
 func (c *Check) checkSupported() bool {
-	requires := c.RequiresSupport
-
-	// does not require any other checks to be supported
-	if len(requires) == 0 {
+	// if this is a supportCheck, return true
+	if isSupportCheck(c.CheckName) {
 		return true
 	}
+	requires := c.RequiresSupport
 
+	// Checks if "supportCheck" passed for
+	// whatever checks are required
 	for _, r := range requires {
 		if !supportExists(r) {
 			return false
+		}
+	}
+
+	// TODO: all these strings needs to be constantized
+
+	// Anonymous function so that this isn't used anywhere else,
+	// as it shouldn't be used unless all supportChecks have already been run
+	getSupportedFlows := func() []string {
+		supported := []string{}
+		for _, check := range ChecksList {
+			switch check.CheckName {
+			case "implicit-flow-supported":
+				if check.State == PASS {
+					supported = append(supported, "implicit")
+				}
+			case "authorization-code-flow-supported":
+				if check.State == PASS {
+					supported = append(supported, "authorization-code")
+				}
+			}
+		}
+		return supported
+	}
+	supportedFlows := getSupportedFlows()
+
+	// no flow types are supported
+	if len(supportedFlows) == 0 {
+		return false
+	}
+
+	// Check if any flow type is available to support the steps of
+	// this check
+	for i, s := range c.Steps {
+		switch s.FlowType {
+		case "implicit":
+			if !sliceContains(supportedFlows, "implicit") {
+				return false
+			}
+		case "authorization-code":
+			if !sliceContains(supportedFlows, "authorization-code") {
+				return false
+			}
+		default:
+			// This is the case where a flowtype for a step was not set,
+			// so just update it to whatever flowtype is supported
+			c.Steps[i].FlowType = supportedFlows[0]
+			flowInstance := c.Steps[i].FlowInstance
+			flowInstance.UpdateFlowType(supportedFlows[0])
+
+			return true
 		}
 	}
 
@@ -214,6 +267,12 @@ func supportExists(name string) bool {
 		}
 	}
 	return false
+}
+
+// TODO: fix this silly implementation, supportChecks and
+// normal checks should be split up in a way that makes sense and is easily determined
+func isSupportCheck(name string) bool {
+	return strings.Contains(name, "-supported")
 }
 
 func readChecks(ctx context.Context, checkFile, promptFlag string) []*Check {
@@ -250,7 +309,10 @@ func processChecks(ctx context.Context, checks []Check, promptFlag string) ([]*C
 			case "implicit":
 				responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
 			default:
-				log.Fatalf("Invalid flow type given for check %s", c.CheckName)
+				// if malformed or empty, leave this empty
+				// support will be determined later, and
+				// this will be updated in the Step.runStep() method
+				responseType = ""
 			}
 			// make a new context child for each tabs
 			// update ctx to the current context of the new instance

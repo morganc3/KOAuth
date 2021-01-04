@@ -16,7 +16,10 @@ const (
 )
 
 type Step struct {
-	FlowType string `json:"flowType"`
+	// Flow type, authorization-code and implicit are supported
+	// if this is empty, it will default to whichever flow is supported
+	// flow, prioritizing implicit
+	FlowType string `json:"flowType,omitempty"`
 
 	// Extra parameters to be added to Auth URL
 	AuthURLParams map[string][]string `json:"authUrlParams,omitempty"`
@@ -94,6 +97,10 @@ func (s *Step) runStep() (State, error) {
 		}
 
 		authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE)
+		if authorizationCode == "" {
+			s.FailMessage = "Redirected without Authorization Code"
+			return FAIL, nil
+		}
 
 		// set authorization code from redirect uri
 		s.TokenExchangeParams[oauth.AUTHORIZATION_CODE] = []string{authorizationCode}
@@ -128,6 +135,11 @@ func (s *Step) runStep() (State, error) {
 			return FAIL, nil
 		}
 
+		if oauth.GetImplicitAccessTokenFromURL(redirectedTo.String()) == "" {
+			s.FailMessage = "Redirected without Access Token"
+			return FAIL, nil
+		}
+
 		ok, err := s.requiredRedirectParamsPresent(redirectedTo)
 		if !ok || err != nil {
 			s.ErrorMessage = err.Error()
@@ -138,6 +150,7 @@ func (s *Step) runStep() (State, error) {
 	}
 
 	// should never get here
+	log.Fatalf("Received bad flowtype: %s\n", s.FlowType)
 	s.ErrorMessage = "Something went wrong"
 	return WARN, errors.New("Something went wrong")
 }

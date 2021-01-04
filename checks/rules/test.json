@@ -1,0 +1,45 @@
+{
+    "supportChecks":[
+        {
+            "name":"implicit-flow-supported",
+            "risk":"info",
+            "description":"Checks if the implicit flow is supported",
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"implicit",
+                    "references":"",
+                    "requiredOutcome": "SUCCEED"
+                }
+            ]
+        },
+        {
+            "name":"authorization-code-flow-supported",
+            "risk":"info",
+            "description":"Checks if the authorization code flow is supported",
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"authorization-code",
+                    "references":"",
+                    "requiredOutcome": "SUCCEED"
+                }
+            ]
+        }
+    ],
+    "checks": [
+        {
+            "name":"redirect-uri-total-change",
+            "risk":"high",
+            "description":"Completely alters the redirect URI",
+            "references":"",
+            "steps": [
+                {
+                    "authURLParams":{"redirect_uri":["https://maliciousdomain.h0.gs"]},
+                    "deleteURLParams":["redirect_uri"],
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        }
+    ]
+}

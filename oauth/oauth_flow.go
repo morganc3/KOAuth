@@ -14,6 +14,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// TODO FlowType should really be "ResponseType" to be more accurate,
+// this will also clear up confusion between FlowType in Check struct
 type FlowType string
 
 const (
@@ -64,7 +66,7 @@ func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType, pro
 		Ctx:                 cx,
 		Cancel:              cancel,
 	}
-	flowInstance.AuthorizationURL = flowInstance.GenerateAuthorizationURL(ft, "random_state_value", promptFlag)
+	flowInstance.AuthorizationURL = GenerateAuthorizationURL(ft, "random_state_value", promptFlag)
 
 	return &flowInstance
 }
@@ -104,7 +106,7 @@ func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Toke
 	return oauth2.RetrieveToken(ctx, &config.Config.OAuthConfig, v)
 }
 
-func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.URL {
+func GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.URL {
 	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam(RESPONSE_TYPE, string(flowType))
 	URLString := config.Config.OAuthConfig.AuthCodeURL(state, option)
 	URL, err := url.Parse(URLString)
@@ -122,6 +124,20 @@ func (i *FlowInstance) GenerateAuthorizationURL(flowType FlowType, state, prompt
 	// despite it not being part of the RFC
 	SetQueryParameter(URL, "nonce", randStr(32))
 	return URL
+}
+
+// update FlowType value and update Authorization URL
+func (i *FlowInstance) UpdateFlowType(ft string) {
+	var responeType string
+	switch ft {
+	case "implicit":
+		responeType = "token"
+	case "authorization-code":
+		responeType = "code"
+	}
+
+	i.FlowType = FlowType(responeType)
+	SetQueryParameter(i.AuthorizationURL, RESPONSE_TYPE, responeType)
 }
 
 func GetImplicitAccessTokenFromURL(urlString string) string {
