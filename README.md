@@ -23,7 +23,7 @@ various checks
 Usage:
 - Place OAuth 2.0 credentials/information in config JSON file. An example is in config-template.json
 - `go build`
-- `./KOAuth --config configfile.json --checks ./config/resources/checks.json --timeout 4`
+- `./KOAuth --config=configfile.json --checks=./config/resources/checks.json --timeout=4`
 
 By default, KOAuth will attempt to authenticate your browser session by performing a normal OAuth flow (which generally will prompt for authentication if you are not logged in), 
 but you may provide an argument to the "--authentication-url" flag to authenticate at another URL. Once you have authenticated, 
