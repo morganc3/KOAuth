@@ -156,6 +156,12 @@ github.com/morganc3/oauth2 v0.1.8 h1:yVjmYYYnm3JElK37CR0vIYZzfPHSIk2nEcZrO5etPPk
 github.com/morganc3/oauth2 v0.1.8/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
 github.com/morganc3/oauth2 v0.1.9 h1:redtjBv4al6yYt4ZOElu4RIeL8YCSoBzrBlYW/gSTTY=
 github.com/morganc3/oauth2 v0.1.9/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
+github.com/morganc3/oauth2 v0.1.10 h1:XL1ynqtrO2QT2GJzCceTss6DFQYQA0A24xXIzEBMmEs=
+github.com/morganc3/oauth2 v0.1.10/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
+github.com/morganc3/oauth2 v0.1.11 h1:4PINR5IyLpNwLX0XlbvfJ4jktCW/UaC1mVkGjmS4hBA=
+github.com/morganc3/oauth2 v0.1.11/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
+github.com/morganc3/oauth2 v0.1.12 h1:dzxK/OOCOgKe/idw1u6Psk4z1qS74ZSAjmF52rtkYeo=
+github.com/morganc3/oauth2 v0.1.12/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
 github.com/ogier/pflag v0.0.1 h1:RW6JSWSu/RkSatfcLtogGfFgpim5p7ARQ10ECk5O750=
 github.com/ogier/pflag v0.0.1/go.mod h1:zkFki7tvTa0tafRvTBIZTvzYyAu6kQhPZFnshFFPE+g=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
