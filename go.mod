@@ -19,4 +19,4 @@ require (
 	honnef.co/go/tools v0.0.1-2020.1.4
 )
 
-replace golang.org/x/oauth2 => github.com/morganc3/oauth2 v0.1.0
+replace golang.org/x/oauth2 => github.com/morganc3/oauth2 v0.1.9

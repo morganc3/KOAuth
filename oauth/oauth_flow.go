@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"time"
 
@@ -24,19 +25,21 @@ const (
 )
 
 type FlowInstance struct {
-	FlowType            FlowType
-	FlowTimeoutSeconds  time.Duration
-	Ctx                 context.Context
-	Cancel              context.CancelFunc
-	AuthorizationURL    *url.URL
-	ProvidedRedirectURL *url.URL
-	RedirectedToURL     *url.URL
-	ExchangeRequest     *ExchangeRequest
+	FlowType            FlowType           `json:"-"`
+	FlowTimeoutSeconds  time.Duration      `json:"-"`
+	Ctx                 context.Context    `json:"-"`
+	Cancel              context.CancelFunc `json:"-"`
+	AuthorizationURL    *url.URL           `json:"-"`
+	ProvidedRedirectURL *url.URL           `json:"-"`
+	RedirectedToURL     *url.URL           `json:"-"`
+	ExchangeRequest     *ExchangeRequest   `json:"exchangeRequest,omitempty"`
 }
 
 type ExchangeRequest struct {
-	Request  *http.Request
-	Response *http.Response
+	RequestString  string         `json:"request,omitempty"`
+	ResponseString string         `json:"response,omitempty"`
+	Request        *http.Request  `json:"-"`
+	Response       *http.Response `json:"-"`
 }
 
 var FLOW_TIMEOUT_SECONDS time.Duration
@@ -62,7 +65,6 @@ func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType, pro
 		FlowTimeoutSeconds:  FLOW_TIMEOUT_SECONDS,
 		ProvidedRedirectURL: redirectUri,
 		RedirectedToURL:     new(url.URL),
-		ExchangeRequest:     new(ExchangeRequest),
 		Ctx:                 cx,
 		Cancel:              cancel,
 	}
@@ -101,9 +103,33 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 }
 
 // Same as Exchange() from https://github.com/golang/oauth2 but
-// takes arbitrary url values
+// takes arbitrary url values and gives access to HTTP request and response
 func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Token, error) {
-	return oauth2.RetrieveToken(ctx, &config.Config.OAuthConfig, v)
+	req, resp, tkn, err := oauth2.RetrieveToken(ctx, &config.Config.OAuthConfig, v)
+	var reqString, respString string
+	if req != nil {
+		reqBytes, err := httputil.DumpRequest(req, true)
+		reqString = string(reqBytes)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	if resp != nil {
+		respBytes, err := httputil.DumpResponse(resp, true)
+		respString = string(respBytes)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	i.ExchangeRequest = &ExchangeRequest{
+		Request:        req,
+		Response:       resp,
+		RequestString:  reqString,
+		ResponseString: respString,
+	}
+	return tkn, err
+
 }
 
 func GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.URL {

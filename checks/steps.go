@@ -53,7 +53,7 @@ type Step struct {
 	// State contains result of the step
 	State `json:"state"`
 
-	FlowInstance *oauth.FlowInstance `json:"-"`
+	FlowInstance *oauth.FlowInstance `json:"flow,omitempty"`
 }
 
 func (s *Step) runStep() (State, error) {
