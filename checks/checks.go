@@ -90,18 +90,6 @@ func DoChecks() {
 // Write Check results in JSON format to file
 func WriteResults(outfile string) {
 
-	type CheckOut struct {
-		CheckName    string `json:"name"`
-		RiskRating   string `json:"risk"`
-		Description  string `json:"description"`
-		SkipReason   string `json:"skipReason,omitempty"`
-		References   string `json:"references,omitempty"`
-		FailMessage  string `json:"failMessage,omitempty"`
-		ErrorMessage string `json:"errorMessage,omitempty"`
-		Steps        []Step `json:"steps,omitempty"`
-		State        `json:"state"`
-	}
-
 	var outList []CheckOut
 	for _, c := range ChecksList {
 		// only want to output some fields, so
@@ -122,6 +110,14 @@ func WriteResults(outfile string) {
 		if err != nil {
 			log.Fatalf("Could not Unmarshal to JSON to output format for  %s\n", c.CheckName)
 		}
+
+		steps := c.Steps
+		// Export steps to format for outputting
+		outCheck.Steps = []StepOut{}
+		for _, s := range steps {
+			outCheck.Steps = append(outCheck.Steps, s.Export())
+		}
+
 		outCheck.State = c.State
 		outList = append(outList, outCheck)
 	}
