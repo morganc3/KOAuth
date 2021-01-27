@@ -72,13 +72,13 @@
       .lh-125 { line-height: 1.25; }
       .lh-150 { line-height: 1.5; }
 
-      .risk-high {color: var(--red)}
+      .risk-High {color: var(--red)}
 
-      .risk-medium {color: #ffcc66}
+      .risk-Medium {color: #ffcc66}
 
-      .risk-low{color: #3399ff}
+      .risk-Low{color: #3399ff}
 
-      .risk-info{color: var(--gray)}
+      .risk-Info{color: var(--gray)}
 
       .findingNamePass{color:green}
       .findingNameFail{color:red}
@@ -107,7 +107,7 @@
         {{html findingName}}
       </div>
       <div class="findingRisk${index}">
-        <p  class="pb-2 mb-0 risk-high">${risk}</p>
+        <p  class="pb-2 mb-0 risk-${risk}">Risk: ${risk}</p>
       </div>
       <div class="findingDescription${index}">
         <p id="findingDescription${index}" class="pb-2 mb-0">{{html description}}</p>
@@ -155,7 +155,7 @@
 
   <script> 
     function writeFinding(finding, ind){
-      var risk = "Risk: " + finding.risk.charAt(0).toUpperCase() + finding.risk.slice(1);
+      var risk = finding.risk.charAt(0).toUpperCase() + finding.risk.slice(1);
 
       var description = "Description: " + finding.description;
 
