@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>KOAuth Report</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.templates/beta1/jquery.tmpl.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+    <style>
+      html,
+      body {
+        overflow-x: hidden; /* Prevent scroll on narrow devices */
+      }
+
+      body {
+        padding-top: 56px;
+      }
+
+      .nav-scroller {
+        position: relative;
+        z-index: 2;
+        height: 2.75rem;
+        overflow-y: hidden;
+      }
+
+      .nav-scroller .nav {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -ms-flex-wrap: nowrap;
+        flex-wrap: nowrap;
+        padding-bottom: 1rem;
+        margin-top: -1px;
+        overflow-x: auto;
+        color: rgba(255, 255, 255, .75);
+        text-align: center;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .nav-underline .nav-link {
+        padding-top: .75rem;
+        padding-bottom: .75rem;
+        font-size: .875rem;
+        color: var(--secondary);
+      }
+
+      .nav-underline .nav-link:hover {
+        color: var(--blue);
+      }
+
+      .nav-underline .active {
+        font-weight: 500;
+        color: var(--gray-dark);
+      }
+
+      .text-white-50 { color: rgba(255, 255, 255, .5); }
+
+      .bg-red { background-color: var(--red); }
+
+      .border-bottom { border-bottom: 1px solid #e5e5e5; }
+
+      .box-shadow { box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05); }
+
+      .lh-100 { line-height: 1; }
+      .lh-125 { line-height: 1.25; }
+      .lh-150 { line-height: 1.5; }
+
+      .risk-high {color: var(--red)}
+
+      .risk-medium {color: #ffcc66}
+
+      .risk-low{color: #3399ff}
+
+      .risk-info{color: var(--gray)}
+
+      .findingNamePass{color:green}
+      .findingNameFail{color:red}
+      .findingNameSkip{color:yellow}
+
+      .steps{
+        padding-left:3em;
+        padding-right:8em;
+        word-break:break-all;
+      }
+
+      .exchangeDetails{
+        margin-left:2em;
+        margin-right:2em;
+        color:black;
+        padding-left:2em;
+        padding-right:2em
+      }
+    </style>
+  </head>
+  
+  <!-- jquery finding template -->
+  <script id="findingTemplate" type="text/x-jquery-tmpl">
+    <div class="text-muted pt-3">
+      <div class="findingName">
+        {{html findingName}}
+      </div>
+      <div class="findingRisk${index}">
+        <p  class="pb-2 mb-0 risk-high">${risk}</p>
+      </div>
+      <div class="findingDescription${index}">
+        <p id="findingDescription${index}" class="pb-2 mb-0">{{html description}}</p>
+      </div>
+      <h6>Check Steps:</h6>
+      <div id="stepsFromTemplate${index}"></div>
+    </div>
+  </script>
+
+  <!-- jquery step template -->
+  <script id="stepTemplate" type="text/x-jquery-tmpl">
+    <div class="accordion" id="stepAccordion${findingIndex}-${index}">
+      <div class="card">
+        <div class="card-header" id="heading${findingIndex}-${index}">
+          <h5 class="mb-0">
+            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse${findingIndex}-${index}" aria-expanded="false" aria-controls="collapse${findingIndex}-${index}">
+              <h6>Step ${index+1}</h6>
+            </button>
+          </h5>
+        </div>
+    
+        <div id="collapse${findingIndex}-${index}" class="collapse" aria-labelledby="heading${findingIndex}-${index}" data-parent="#stepAccordion${findingIndex}-${index}">
+          <div class="card-body">
+            <div class="steps">
+              <div class="stepinfo text-white bg-dark">
+                <p id="stepInfo${findingIndex}-${index}" style="padding-top:1em;padding-left: 2em; padding-right: 2em">{{html stepContent}}</p>
+                <div class="collapse bg-light exchangeDetails" id="collapseRequest${findingIndex}-${index}">
+                  <div id="findingRequest${findingIndex}-${index}">
+                    
+                  </div>
+                </div>
+                <div class="collapse bg-light exchangeDetails" id="collapseResponse${findingIndex}-${index}">
+                  <div id="findingResponse${findingIndex}-${index}">
+                    
+                  </div>
+                </div>
+  
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script> 
+    function writeFinding(finding, ind){
+      var risk = "Risk: " + finding.risk.charAt(0).toUpperCase() + finding.risk.slice(1);
+
+      var description = "Description: " + finding.description;
+
+      nameContent = finding.name
+      result = finding.state;
+      if (result == "PASS") {
+        findingName = `<h5 class="findingNamePass border-bottom border-gray pb-2 mb-0" id="findingName${ind}">${nameContent} - PASSED <i style="font-size: 2rem;" class="bi bi-check text-success"></i></h5>`
+      } else if (result == "FAIL") {
+        findingName = `<h5 class="findingNameFail border-bottom border-gray pb-2 mb-0" id="findingName${ind}">${nameContent} - FAILED <i style="font-size: 2rem;" class="bi bi-check text-success"></i></h5>`
+      } else { // SKIPPED
+        findingName = `<h5 class="findingNameSkiped border-bottom border-gray pb-2 mb-0" id="findingName${ind}">${nameContent} - SKIPPED <i style="font-size: 2rem;" class="bi bi-check text-success"></i></h5>`
+      }
+      
+    
+      checkInfo = {
+        index: ind,
+        risk: risk,
+        description: description,
+        findingName: findingName,
+      }
+      
+      $("#findingTemplate").tmpl(checkInfo).appendTo("#findingsFromTemplate");
+      writeStepContent(finding, ind);
+    }
+
+    function writeStepContent(finding, findingIndex){
+      var stepIndex = 0;
+      for (step of finding.steps ) {
+        var toDisplay = [
+        {
+          "key":"flowType",
+          "display":"Flow Type"
+        },
+        {
+          "key":"requiredOutcome",
+          "display":"Required Outcome"
+        },
+        {
+          "key":"state",
+          "display":"Outcome"
+        },
+        {
+          "key":"authorizationURL",
+          "display":"Authorization URL"
+        },
+        {
+          "key":"redirectedToURL",
+          "display":"Redirected to"
+        },
+      ];
+
+
+        var stepContent = ""
+        for (item of toDisplay){
+          if(step.hasOwnProperty(item.key)){
+            stepContent += "<b>"+item.display+"</b>" + ": <br>" + step[item.key] + "<br><br>";
+          }
+        }
+
+        if(step.hasOwnProperty("flow")){
+          if(step.flow.exchangeRequest.hasOwnProperty("request")){
+            exchangeReqString = step.flow.exchangeRequest.request.replace(/\n/g,"<br>");;
+            stepContent += "<b>Exchange Request</b>: <br>" + exchangeReqString + "<br><br>";
+          }
+          if(step.flow.exchangeRequest.hasOwnProperty("response")){
+            exchangeRespString = step.flow.exchangeRequest.response.replace(/\n/g,"<br>");;
+            stepContent += "<b>Exchange Response</b>: <br>" + exchangeRespString + "<br><br>";
+          }
+        }
+        stepInfo = {
+          findingIndex: findingIndex,
+          index: stepIndex,
+          stepContent: stepContent,
+        }
+        $("#stepTemplate").tmpl(stepInfo).appendTo("#stepsFromTemplate"+findingIndex);
+        stepIndex++;
+      }
+    }
+
+    function writeFindings(){
+      data =  [%[.]%]; // Golang struct imported here as JSON 
+      data.forEach(function(item,index) {
+        writeFinding(item, index)
+      });
+    }
+
+    $(document).ready(function() {
+        writeFindings();
+    });
+</script>
+  <body class="bg-light">
+
+    <main role="main" class="container">
+      <div class="d-flex align-items-center p-3 my-3 text-white-50 bg-red rounded box-shadow">
+        <div class="lh-100">
+          <h6 class="mb-0 text-white lh-100">KOAuth Report</h6>
+        </div>
+      </div>
+
+      <div class="my-3 p-3 bg-white rounded box-shadow">
+        <h3 class="border-bottom border-gray pb-2 mb-0">Findings</h3>
+        <div id="findingsFromTemplate">
+
+        </div>
+      </div>
+
+    </main>
+    
+  </body>
+</html>

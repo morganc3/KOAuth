@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
 
@@ -85,50 +84,6 @@ func DoChecks() {
 	for _, c := range ChecksList {
 		c.DoCheck()
 	}
-}
-
-// Write Check results in JSON format to file
-func WriteResults(outfile string) {
-
-	var outList []CheckOut
-	for _, c := range ChecksList {
-		// only want to output some fields, so
-		// marhsal Check struct to bytes, then unmarshal it back to tmp struct
-		// then marshal to bytes and write to file
-
-		var outCheck CheckOut
-		if c.State != SKIP {
-			c.SkipReason = ""
-		}
-
-		bslice, err := json.Marshal(c)
-		if err != nil {
-			log.Fatalf("Could not Marshal to JSON for Check %s\n", c.CheckName)
-		}
-
-		err = json.Unmarshal(bslice, &outCheck)
-		if err != nil {
-			log.Fatalf("Could not Unmarshal to JSON to output format for  %s\n", c.CheckName)
-		}
-
-		steps := c.Steps
-		// Export steps to format for outputting
-		outCheck.Steps = []StepOut{}
-		for _, s := range steps {
-			outCheck.Steps = append(outCheck.Steps, s.Export())
-		}
-
-		outCheck.State = c.State
-		outList = append(outList, outCheck)
-	}
-
-	bslice, err := json.Marshal(outList)
-	err = ioutil.WriteFile(outfile, bslice, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("Output has been saved to %s\n", outfile)
 }
 
 // print Check results to console

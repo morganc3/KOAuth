@@ -6,3 +6,4 @@ testingconfigs/*
 output.json
 config/resources/checks2.json
 curltest
+output

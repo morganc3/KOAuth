@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"log"
+	"os"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -15,13 +17,14 @@ import (
 func Execute() {
 	configFile := flag.String("config", "config.json", "config file name")
 	checkFile := flag.String("checks", "./checks/rules/checks.json", "checks file name")
-	outFile := flag.String("outfile", "output.json", "results output file")
+	outDir := flag.String("out", "output/", "directory for output to be stored")
 	authUrl := flag.String("authentication-url", "", "Url to originally authenticate at to establish an authenticated session in the browser. If left blank, authentication will occur through an OAuth flow.")
 	proxy := flag.String("proxy", "", "HTTP Proxy <ip>:<port>")
 	userAgent := flag.String("user-agent", `Chrome`, "User-Agent Header for Chrome")
 	timeout := flag.Int("timeout", 4, "Timeout for waiting for OAuth redirects to redirect_uri")
-	PromptFlag := flag.String("prompt", "none", "Value of \"prompt\" parameter in authorization request. If the authorization server does\n\t\t not support prompt=none, it should be set to \"login\" or \"select_account\". If the pressence of the prompt parameter\n\t\t breaks the flow, set to this flag to the string \"DONT_SEND\" and it will not be sent.")
-	ClientAuth := flag.String("client-auth", "auto", "Client Authentication Method: \"BASIC\", \"BODY\", or \"auto\", to indicate if client ID and client secret\n\t\t should be sent in an HTTP Basic authentication header or in the POST body, or should be auto detected.")
+	PromptFlag := flag.String("prompt", "none", "Value of \"prompt\" parameter in authorization request. If the authorization server does not support prompt=none, it should be set to \"login\" or \"select_account\". If the pressence of the prompt parameter breaks the flow, set to this flag to the string \"DONT_SEND\" and it will not be sent.")
+	ClientAuth := flag.String("client-auth", "auto", "Client Authentication Method: \"BASIC\", \"BODY\", or \"auto\", to indicate if client ID and client secret should be sent in an HTTP Basic authentication header or in the POST body, or should be auto detected.")
+	htmlReportTemplate := flag.String("report-template", "./checks/assets/report.html", "HTML report template to consume JSON output")
 	flag.Parse()
 
 	oauth.FLOW_TIMEOUT_SECONDS = time.Duration(*timeout)
@@ -55,8 +58,31 @@ func Execute() {
 	fctx, fctxCancel := initSession(*authUrl)
 	defer fctxCancel()
 
-	checks.Init(*checkFile, fctx, *PromptFlag)
+	performChecks(fctx, checkFile, PromptFlag, outDir, htmlReportTemplate)
+}
+
+func performChecks(ctx context.Context, checkFile, promptFlag, outDir, htmlReportTemplate *string) {
+	if !fileExists(*checkFile) {
+		log.Printf("Check file at %s does not exist\n", *checkFile)
+		log.Fatal("The default check file is in the repository at KOAuth/checks/rules/checks.json")
+	}
+
+	if !fileExists(*htmlReportTemplate) {
+		log.Printf("HTML Report template file at %s does not exist\n", *htmlReportTemplate)
+		log.Fatal("The default report template file is in the repository at KOAuth/checks/assets/report.html")
+	}
+
+	checks.Init(*checkFile, ctx, *promptFlag)
 	checks.DoChecks()
 	checks.PrintResults()
-	checks.WriteResults(*outFile)
+
+	checks.WriteResults(*outDir, *htmlReportTemplate)
+}
+
+func fileExists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// file doesn't exist
+		return false
+	}
+	return true
 }
