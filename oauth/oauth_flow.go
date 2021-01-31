@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/morganc3/KOAuth/browser"
 	"github.com/morganc3/KOAuth/config"
 	"golang.org/x/oauth2"
 )
 
-// TODO FlowType should really be "ResponseType" to be more accurate,
+// TODO: FlowType should really be "ResponseType" to be more accurate,
 // this will also clear up confusion between FlowType in Check struct
 type FlowType string
 
@@ -42,8 +43,6 @@ type ExchangeRequest struct {
 	Response       *http.Response `json:"-"`
 }
 
-var FLOW_TIMEOUT_SECONDS time.Duration
-
 // TODO: There are likely to be applications where
 // either:
 //   A. Session information is updated on each request
@@ -56,13 +55,13 @@ var FLOW_TIMEOUT_SECONDS time.Duration
 // chrome context for each check.
 
 func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType, promptFlag string) *FlowInstance {
-	redirectUri, err := url.Parse(config.Config.OAuthConfig.RedirectURL)
+	redirectUri, err := url.Parse(config.OAuthConfig.OAuth2Config.RedirectURL)
 	if err != nil {
 		log.Fatalf("Failed to parse provided redirect_uri in config file")
 	}
 	flowInstance := FlowInstance{
 		FlowType:            ft,
-		FlowTimeoutSeconds:  FLOW_TIMEOUT_SECONDS,
+		FlowTimeoutSeconds:  time.Duration(config.GetOptAsInt(config.FLAG_TIMEOUT)),
 		ProvidedRedirectURL: redirectUri,
 		RedirectedToURL:     new(url.URL),
 		Ctx:                 cx,
@@ -81,8 +80,8 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 	actions = append(actions, chromedp.Navigate(urlString))
 	// adds listener which will cancel the context
 	// if a redirect to redirect_uri occurs
-	ch := WaitRedirect(i.Ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
-	c, err := RunWithTimeOut(&i.Ctx, FLOW_TIMEOUT_SECONDS, actions)
+	ch := browser.WaitRedirect(i.Ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
+	c, err := browser.RunWithTimeOut(&i.Ctx, time.Duration(config.GetOptAsInt(config.FLAG_TIMEOUT)), actions)
 	if err != nil {
 		return err
 	}
@@ -105,7 +104,7 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 // Same as Exchange() from https://github.com/golang/oauth2 but
 // takes arbitrary url values and gives access to HTTP request and response
 func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Token, error) {
-	req, resp, tkn, err := oauth2.RetrieveToken(ctx, &config.Config.OAuthConfig, v)
+	req, resp, tkn, err := oauth2.RetrieveToken(ctx, &config.OAuthConfig.OAuth2Config, v)
 	var reqString, respString string
 	if req != nil {
 		reqBytes, err := httputil.DumpRequest(req, true)
@@ -134,7 +133,7 @@ func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Toke
 
 func GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.URL {
 	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam(RESPONSE_TYPE, string(flowType))
-	URLString := config.Config.OAuthConfig.AuthCodeURL(state, option)
+	URLString := config.OAuthConfig.OAuth2Config.AuthCodeURL(state, option)
 	URL, err := url.Parse(URLString)
 	if err != nil {
 		log.Fatal(err)

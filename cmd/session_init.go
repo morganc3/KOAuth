@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/chromedp/chromedp"
+	"github.com/morganc3/KOAuth/browser"
 	"github.com/morganc3/KOAuth/oauth"
 )
 
@@ -17,7 +18,7 @@ import (
 // setup cookies, localstorage, indexdb, etc. in the browser.
 
 func initSession(authUrl string) (context.Context, context.CancelFunc) {
-	ctx, cancel := chromedp.NewContext(oauth.ChromeExecContext)
+	ctx, cancel := chromedp.NewContext(browser.ChromeExecContext)
 
 	// if an authUrl was provided, auth there and return. Otherwise we
 	// will do an oauth flow which should prompt the user to authenticate
@@ -39,7 +40,7 @@ func initSession(authUrl string) (context.Context, context.CancelFunc) {
 	urlString := i.AuthorizationURL.String()
 
 	// adds listener listening for a redirect to our redirect_uri
-	ch := oauth.WaitRedirect(ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
+	ch := browser.WaitRedirect(ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
 
 	err := chromedp.Run(ctx, chromedp.Navigate(urlString))
 	if err != nil {

@@ -121,7 +121,7 @@ func makeDirectory(outDir string) error {
 		return nil
 	}
 	if os.IsNotExist(err) { // directory does't exist, create it
-		return os.Mkdir(outDir, 0755)
+		return os.MkdirAll(outDir, 0755)
 	}
 	return nil
 }
@@ -142,7 +142,11 @@ func renderTemplate(co []CheckOut, htmlReportTemplate, htmlReportPath string) {
 		log.Fatal(err)
 	}
 
-	t, _ = t.Parse(string(tpl))
+	t, err = t.Parse(string(tpl))
+	if err != nil {
+		log.Println("Error parsing template")
+		log.Fatal(err)
+	}
 
 	f, err := os.Create(htmlReportPath)
 	if err != nil {

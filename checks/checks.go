@@ -24,6 +24,14 @@ const (
 	SKIP State = "SKIP" // Skipped for some reason
 )
 
+type CheckType string
+
+const (
+	SUPPORT CheckType = "support" // Check to see if something is supported
+	NORMAL  CheckType = "normal"  // Normal check defined by provided JSON check file
+	CUSTOM  CheckType = "custom"  // Custom check that is mapped to a Go function
+)
+
 var ChecksList []*Check
 
 type ChecksIn struct {
@@ -102,13 +110,7 @@ func PrintResults() {
 // TODO checks:
 // iframes allowed at consent url
 
-// pkce only supported for implicit
-// pkce downgrade sha256 -> plain
-// pkce downgrade (stop using pkce at all)
-
 // client secret not required
-
-// Changes redirect URI, checks if we are still redirected
 
 // TODO: There should be error checking here for
 // different errors, such as if we get an "error" URL parameter
@@ -167,11 +169,11 @@ func (c *Check) checkSupported() bool {
 			switch check.CheckName {
 			case "implicit-flow-supported":
 				if check.State == PASS {
-					supported = append(supported, "implicit")
+					supported = append(supported, oauth.FLOW_IMPLICIT)
 				}
 			case "authorization-code-flow-supported":
 				if check.State == PASS {
-					supported = append(supported, "authorization-code")
+					supported = append(supported, oauth.FLOW_AUTHORIZATION_CODE)
 				}
 			}
 		}
@@ -188,12 +190,12 @@ func (c *Check) checkSupported() bool {
 	// this check
 	for i, s := range c.Steps {
 		switch s.FlowType {
-		case "implicit":
-			if !sliceContains(supportedFlows, "implicit") {
+		case oauth.FLOW_IMPLICIT:
+			if !sliceContains(supportedFlows, oauth.FLOW_IMPLICIT) {
 				return false
 			}
-		case "authorization-code":
-			if !sliceContains(supportedFlows, "authorization-code") {
+		case oauth.FLOW_AUTHORIZATION_CODE:
+			if !sliceContains(supportedFlows, oauth.FLOW_AUTHORIZATION_CODE) {
 				return false
 			}
 		default:
@@ -255,12 +257,12 @@ func processChecks(ctx context.Context, checks []Check, promptFlag string) ([]*C
 		for j, s := range c.Steps {
 			var responseType oauth.FlowType
 			switch s.FlowType {
-			case "authorization-code":
+			case oauth.FLOW_AUTHORIZATION_CODE:
 				responseType = oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
-			case "implicit":
+			case oauth.FLOW_IMPLICIT:
 				responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
 			default:
-				// if malformed or empty, leave this empty
+				// if malformed or empty, leave this empty.
 				// support will be determined later, and
 				// this will be updated in the Step.runStep() method
 				responseType = ""

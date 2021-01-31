@@ -1,11 +1,11 @@
-package oauth
+package browser
 
 import (
 	"context"
 	"log"
 	"net/url"
-	"time"
 
+	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 )
@@ -42,7 +42,29 @@ func WaitRedirect(ctx context.Context, host, path string) <-chan *url.URL {
 	return ch
 }
 
-func RunWithTimeOut(ctx *context.Context, timeout time.Duration, actions []chromedp.Action) (context.Context, error) {
-	timeoutContext, _ := context.WithTimeout(*ctx, timeout*time.Second)
-	return timeoutContext, chromedp.Run(timeoutContext, actions...)
+func getFullResponse(chromeContext context.Context, url string, requestHeaders map[string]interface{}, response *string, statusCode *int64, responseHeaders *map[string]interface{}) chromedp.Tasks {
+	chromedp.ListenTarget(chromeContext, func(event interface{}) {
+		switch responseReceivedEvent := event.(type) {
+		case *network.EventResponseReceived:
+			response := responseReceivedEvent.Response
+			if response.URL == url {
+				*statusCode = response.Status
+				*responseHeaders = response.Headers
+			}
+		}
+	})
+
+	return chromedp.Tasks{
+		network.Enable(),
+		network.SetExtraHTTPHeaders(network.Headers(requestHeaders)),
+		chromedp.Navigate(url),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			node, err := dom.GetDocument().Do(ctx)
+			if err != nil {
+				return err
+			}
+			*response, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
+
+			return err
+		})}
 }

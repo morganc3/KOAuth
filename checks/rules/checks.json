@@ -234,6 +234,27 @@
             ]
         },
         {
+            "name":"pkce-short-challenge",
+            "risk":"low",
+            "description":"Attempts to perform a PKCE flow with a short, guessable code verifier. Code verifier should have a minimum length of 43 characters.",
+            "requiresSupport":["pkce-supported"],
+            "references":"",
+            "steps": [
+                {
+                    "flowType":"authorization-code",
+                    "references":"",
+                    "authURLParams":{
+                        "code_challenge":["Nb9gqlOcQmdgooA-8xjf8IPMQhWeyujCph4yzdaXdH0"],
+                        "code_challenge_method":["S256"]
+                    },
+                    "tokenExchangeExtraParams":{
+                        "code_verifier":["short-verifier"]
+                    },
+                    "requiredOutcome": "FAIL"
+                }
+            ]
+        },
+        {
             "name":"pkce-downgrade",
             "risk":"medium",
             "description":"Attempts to downgrade from PKCE, by never sending the code_verifier in the exchange request",
@@ -296,7 +317,7 @@
         {
             "name":"pkce-plain-supported2",
             "risk":"medium",
-            "description":"Checks if code_challenge_method of \"plain\" is supported",
+            "description":"Checks if code_challenge_method with \"plain\" is supported",
             "requiresSupport":["pkce-supported"],
             "references":"",
             "steps": [

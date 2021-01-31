@@ -23,3 +23,9 @@ const (
 	PKCE_CODE_CHALLENGE        = "code_challenge"
 	PKCE_CODE_CHALLENGE_METHOD = "code_challenge_method"
 )
+
+// OAuth 2.0 flow types, as defined in provided JSON check structure
+const (
+	FLOW_AUTHORIZATION_CODE = "authorization-code"
+	FLOW_IMPLICIT           = "implicit"
+)
