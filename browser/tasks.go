@@ -42,6 +42,35 @@ func WaitRedirect(ctx context.Context, host, path string) <-chan *url.URL {
 	return ch
 }
 
+type ResponseHeaders *map[string]interface{}
+type ResponseBody *string
+
+// TODO: fix issue around getting response body
+// note: body works for google.com and not example.com
+//       and headers works for example.com and not google.com
+func Load(url string) (ResponseHeaders, ResponseBody) {
+	chromeContext, cancelContext := chromedp.NewContext(context.Background())
+	defer cancelContext()
+
+	var response string
+	var statusCode int64
+	var responseHeaders map[string]interface{}
+
+	runError := chromedp.Run(
+		chromeContext,
+		getFullResponse(
+			chromeContext, url,
+			map[string]interface{}{"User-Agent": "Mozilla/5.0"},
+			&response, &statusCode, &responseHeaders))
+
+	if runError != nil {
+		// TODO: Currently giving errors around retrieving document body
+		// log.Println(runError)
+	}
+	return &responseHeaders, &response
+}
+
+// gets full response including headers / status code
 func getFullResponse(chromeContext context.Context, url string, requestHeaders map[string]interface{}, response *string, statusCode *int64, responseHeaders *map[string]interface{}) chromedp.Tasks {
 	chromedp.ListenTarget(chromeContext, func(event interface{}) {
 		switch responseReceivedEvent := event.(type) {
