@@ -25,6 +25,7 @@ const (
 	AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE = "code"
 )
 
+// json tags here because this is used in the report output
 type FlowInstance struct {
 	FlowType            FlowType           `json:"-"`
 	FlowTimeoutSeconds  time.Duration      `json:"-"`
@@ -155,10 +156,10 @@ func GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.
 func (i *FlowInstance) UpdateFlowType(ft string) {
 	var responeType string
 	switch ft {
-	case "implicit":
-		responeType = "token"
-	case "authorization-code":
-		responeType = "code"
+	case FLOW_IMPLICIT:
+		responeType = IMPLICIT_FLOW_RESPONSE_TYPE
+	case FLOW_AUTHORIZATION_CODE:
+		responeType = AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
 	}
 
 	i.FlowType = FlowType(responeType)

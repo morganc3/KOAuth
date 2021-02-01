@@ -1,338 +1,460 @@
-{
-    "supportChecks":[
+[
+    {
+      "name": "pkce-supported",
+      "risk": "medium",
+      "type": "support",
+      "description": "Checks if PKCE is supported",
+      "references": "",
+      "steps": [
         {
-            "name":"pkce-supported",
-            "risk":"medium",
-            "description":"Checks if PKCE is supported",
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "code_challenge":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"],
-                        "code_challenge_method":["S256"]
-                    },
-                    "tokenExchangeExtraParams":{
-                        "code_verifier":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
-                    },
-                    "requiredOutcome": "SUCCEED"
-                },
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "code_challenge":["q6IBwbTBNQdLVSKVzs06m7R8dJGXyUBtKHZSz3o3jW4="],
-                        "code_challenge_method":["S256"]
-                    },
-                    "tokenExchangeExtraParams":{
-                        "code_verifier":["bad-verifier"]
-                    },
-                    "requiredOutcome": "FAIL"
-                }
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "code_challenge": [
+              "rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"
+            ],
+            "code_challenge_method": [
+              "S256"
             ]
+          },
+          "tokenExchangeExtraParams": {
+            "code_verifier": [
+              "randomjasdjiasiudaradsiasdmkue012939123891238912398123"
+            ]
+          },
+          "requiredOutcome": "SUCCEED"
         },
         {
-            "name":"state-supported-implicit",
-            "risk":"medium",
-            "description":"Checks if state parameter is supported for the implicit flow",
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"implicit",
-                    "references":"",
-                    "authURLParams":{
-                        "state":["MyRandomStateValue"]
-                    },
-                    "deleteURLParams":["state"],
-                    "redirectMustContainFragment":{
-                        "state":["MyRandomStateValue"]
-                    },
-                    "requiredOutcome": "SUCCEED"
-                }
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "code_challenge": [
+              "q6IBwbTBNQdLVSKVzs06m7R8dJGXyUBtKHZSz3o3jW4="
+            ],
+            "code_challenge_method": [
+              "S256"
             ]
-        },
-        {
-            "name":"state-supported-authorization-code",
-            "risk":"medium",
-            "description":"Checks if state parameter is supported for the authorization code flow",
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "state":["MyRandomStateValue"]
-                    },
-                    "deleteURLParams":["state"],
-                    "redirectMustContainUrl":{
-                        "state":["MyRandomStateValue"]
-                    },
-                    "requiredOutcome": "SUCCEED"
-                }
+          },
+          "tokenExchangeExtraParams": {
+            "code_verifier": [
+              "bad-verifier"
             ]
-        },
-        {
-            "name":"implicit-flow-supported",
-            "risk":"info",
-            "description":"Checks if the implicit flow is supported",
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"implicit",
-                    "references":"",
-                    "requiredOutcome": "SUCCEED"
-                }
-            ]
-        },
-        {
-            "name":"authorization-code-flow-supported",
-            "risk":"info",
-            "description":"Checks if the authorization code flow is supported",
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "requiredOutcome": "SUCCEED"
-                }
-            ]
+          },
+          "requiredOutcome": "FAIL"
         }
-    ],
-    "checks": [
+      ]
+    },
+    {
+      "name": "state-supported-implicit",
+      "risk": "medium",
+      "type": "support",
+      "description": "Checks if state parameter is supported for the implicit flow",
+      "references": "",
+      "steps": [
         {
-            "name":"redirect-uri-total-change",
-            "risk":"high",
-            "description":"Completely alters the redirect URI",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["https://maliciousdomain.h0.gs"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
+          "flowType": "implicit",
+          "references": "",
+          "authURLParams": {
+            "state": [
+              "MyRandomStateValue"
             ]
-        },
-        {
-            "name":"redirect-uri-add-higher-domain",
-            "risk":"medium",
-            "description":"Adds a higher level domain to redirect_uri",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}.maliciousdomain.com{{{REDIRECT_PATH}}}"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
+          },
+          "deleteURLParams": [
+            "state"
+          ],
+          "redirectMustContainFragment": {
+            "state": [
+              "MyRandomStateValue"
             ]
-        },
-        {
-            "name":"redirect-uri-add-subdomain",
-            "risk":"medium",
-            "description":"Adds a subdomain to redirect_uri",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://maliciousdomain.{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"redirect-uri-scheme-downgrade",
-            "risk":"high",
-            "description":"Downgrades scheme of redirect URI from HTTPS to HTTP",
-            "skipReason":"This check was skipped because the proper redirect URI did not use the HTTPS scheme",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["http://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"redirect-uri-total-path-change",
-            "risk":"high",
-            "description":"Changes the path of the redirect URI",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}/maliciouspath"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"redirect-uri-path-append",
-            "risk":"medium",
-            "description":"Appends to the redirect_uri path",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}/maliciousaddition"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"redirect-uri-two-provided-redirect-uris",
-            "risk":"medium",
-            "description":"Two redirect uri's were provided, one is correct and one is incorrect. Ensure we are not redirected to the incorrect URI.",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "waitForRedirectTo":"{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}",
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"redirect-uri-improper-parsing",
-            "risk":"high",
-            "description":"Attempt to trick redirect URI parse using \"@\"",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}@malicious.h0.gs"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "waitForRedirectTo":"https://malicious.h0.gs",
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"redirect-uri-changed-to-localhost",
-            "risk":"low",
-            "description":"Checks if the server allows redirects to localhost, which is often enabled for debugging purposes",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["http://localhost"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"redirect-uri-contains-localhost",
-            "risk":"high",
-            "description":"Checks if the server allows redirects to a domain containing localhost",
-            "references":"",
-            "steps": [
-                {
-                    "authURLParams":{"redirect_uri":["http://localhost.malicious.com"]},
-                    "deleteURLParams":["redirect_uri"],
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"pkce-short-challenge",
-            "risk":"low",
-            "description":"Attempts to perform a PKCE flow with a short, guessable code verifier. Code verifier should have a minimum length of 43 characters.",
-            "requiresSupport":["pkce-supported"],
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "code_challenge":["Nb9gqlOcQmdgooA-8xjf8IPMQhWeyujCph4yzdaXdH0"],
-                        "code_challenge_method":["S256"]
-                    },
-                    "tokenExchangeExtraParams":{
-                        "code_verifier":["short-verifier"]
-                    },
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"pkce-downgrade",
-            "risk":"medium",
-            "description":"Attempts to downgrade from PKCE, by never sending the code_verifier in the exchange request",
-            "requiresSupport":["pkce-supported"],
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "code_challenge":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"],
-                        "code_challenge_method":["S256"]
-                    },
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"pkce-downgrade-to-plain",
-            "risk":"medium",
-            "description":"Attempts to send same value for code_challenge and code_verifier (downgrade from S256 to plain)",
-            "requiresSupport":["pkce-supported"],
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "code_challenge":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"],
-                        "code_challenge_method":["S256"]
-                    },
-                    "tokenExchangeExtraParams":{
-                        "code_verifier":["rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"]
-                    },
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"pkce-plain-supported1",
-            "risk":"medium",
-            "description":"Checks if code_challenge_method of \"plain\" is supported",
-            "requiresSupport":["pkce-supported"],
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "code_challenge":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"],
-                        "code_challenge_method":["plain"]
-                    },
-                    "tokenExchangeExtraParams":{
-                        "code_verifier":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
-                    },
-                    "requiredOutcome": "FAIL"
-                }
-            ]
-        },
-        {
-            "name":"pkce-plain-supported2",
-            "risk":"medium",
-            "description":"Checks if code_challenge_method with \"plain\" is supported",
-            "requiresSupport":["pkce-supported"],
-            "references":"",
-            "steps": [
-                {
-                    "flowType":"authorization-code",
-                    "references":"",
-                    "authURLParams":{
-                        "code_challenge":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
-                    },
-                    "tokenExchangeExtraParams":{
-                        "code_verifier":["randomjasdjiasiudaradsiasdmkue012939123891238912398123"]
-                    },
-                    "requiredOutcome": "FAIL"
-                }
-            ]
+          },
+          "requiredOutcome": "SUCCEED"
         }
-    ]
-}
+      ]
+    },
+    {
+      "name": "state-supported-authorization-code",
+      "risk": "medium",
+      "type": "support",
+      "description": "Checks if state parameter is supported for the authorization code flow",
+      "references": "",
+      "steps": [
+        {
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "state": [
+              "MyRandomStateValue"
+            ]
+          },
+          "deleteURLParams": [
+            "state"
+          ],
+          "redirectMustContainUrl": {
+            "state": [
+              "MyRandomStateValue"
+            ]
+          },
+          "requiredOutcome": "SUCCEED"
+        }
+      ]
+    },
+    {
+      "name": "implicit-flow-supported",
+      "risk": "info",
+      "type": "support",
+      "description": "Checks if the implicit flow is supported",
+      "references": "",
+      "steps": [
+        {
+          "flowType": "implicit",
+          "references": "",
+          "requiredOutcome": "SUCCEED"
+        }
+      ]
+    },
+    {
+      "name": "authorization-code-flow-supported",
+      "risk": "info",
+      "type": "support",
+      "description": "Checks if the authorization code flow is supported",
+      "references": "",
+      "steps": [
+        {
+          "flowType": "authorization-code",
+          "references": "",
+          "requiredOutcome": "SUCCEED"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-total-change",
+      "risk": "high",
+      "description": "Completely alters the redirect URI",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "https://maliciousdomain.h0.gs"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-add-higher-domain",
+      "risk": "medium",
+      "description": "Adds a higher level domain to redirect_uri",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}.maliciousdomain.com{{{REDIRECT_PATH}}}"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-add-subdomain",
+      "risk": "medium",
+      "description": "Adds a subdomain to redirect_uri",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "{{{REDIRECT_SCHEME}}}://maliciousdomain.{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-scheme-downgrade",
+      "risk": "high",
+      "description": "Downgrades scheme of redirect URI from HTTPS to HTTP",
+      "skipReason": "This check was skipped because the proper redirect URI did not use the HTTPS scheme",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "http://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-total-path-change",
+      "risk": "high",
+      "description": "Changes the path of the redirect URI",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}/maliciouspath"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-path-append",
+      "risk": "medium",
+      "description": "Appends to the redirect_uri path",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}{{{REDIRECT_PATH}}}/maliciousaddition"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-two-provided-redirect-uris",
+      "risk": "medium",
+      "description": "Two redirect uri's were provided, one is correct and one is incorrect. Ensure we are not redirected to the incorrect URI.",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "waitForRedirectTo": "{{{REDIRECT_SCHEME}}}://malicioussdomain.h0.gs{{{REDIRECT_PATH}}}",
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-improper-parsing",
+      "risk": "high",
+      "description": "Attempt to trick redirect URI parse using \"@\"",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "{{{REDIRECT_SCHEME}}}://{{{REDIRECT_DOMAIN}}}@malicious.h0.gs"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "waitForRedirectTo": "https://malicious.h0.gs",
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-changed-to-localhost",
+      "risk": "low",
+      "description": "Checks if the server allows redirects to localhost, which is often enabled for debugging purposes",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "http://localhost"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "redirect-uri-contains-localhost",
+      "risk": "high",
+      "description": "Checks if the server allows redirects to a domain containing localhost",
+      "references": "",
+      "steps": [
+        {
+          "authURLParams": {
+            "redirect_uri": [
+              "http://localhost.malicious.com"
+            ]
+          },
+          "deleteURLParams": [
+            "redirect_uri"
+          ],
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "pkce-short-challenge",
+      "risk": "low",
+      "description": "Attempts to perform a PKCE flow with a short, guessable code verifier. Code verifier should have a minimum length of 43 characters.",
+      "requiresSupport": [
+        "pkce-supported"
+      ],
+      "references": "",
+      "steps": [
+        {
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "code_challenge": [
+              "Nb9gqlOcQmdgooA-8xjf8IPMQhWeyujCph4yzdaXdH0"
+            ],
+            "code_challenge_method": [
+              "S256"
+            ]
+          },
+          "tokenExchangeExtraParams": {
+            "code_verifier": [
+              "short-verifier"
+            ]
+          },
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "pkce-downgrade",
+      "risk": "medium",
+      "description": "Attempts to downgrade from PKCE, by never sending the code_verifier in the exchange request",
+      "requiresSupport": [
+        "pkce-supported"
+      ],
+      "references": "",
+      "steps": [
+        {
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "code_challenge": [
+              "rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"
+            ],
+            "code_challenge_method": [
+              "S256"
+            ]
+          },
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "pkce-downgrade-to-plain",
+      "risk": "medium",
+      "description": "Attempts to send same value for code_challenge and code_verifier (downgrade from S256 to plain)",
+      "requiresSupport": [
+        "pkce-supported"
+      ],
+      "references": "",
+      "steps": [
+        {
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "code_challenge": [
+              "rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"
+            ],
+            "code_challenge_method": [
+              "S256"
+            ]
+          },
+          "tokenExchangeExtraParams": {
+            "code_verifier": [
+              "rYfL4iLm9cMZnD3io44mnyitTKSECpgDzkPPecwrXtE"
+            ]
+          },
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "pkce-plain-supported1",
+      "risk": "medium",
+      "description": "Checks if code_challenge_method of \"plain\" is supported",
+      "requiresSupport": [
+        "pkce-supported"
+      ],
+      "references": "",
+      "steps": [
+        {
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "code_challenge": [
+              "randomjasdjiasiudaradsiasdmkue012939123891238912398123"
+            ],
+            "code_challenge_method": [
+              "plain"
+            ]
+          },
+          "tokenExchangeExtraParams": {
+            "code_verifier": [
+              "randomjasdjiasiudaradsiasdmkue012939123891238912398123"
+            ]
+          },
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    },
+    {
+      "name": "pkce-plain-supported2",
+      "risk": "medium",
+      "description": "Checks if code_challenge_method with \"plain\" is supported",
+      "requiresSupport": [
+        "pkce-supported"
+      ],
+      "references": "",
+      "steps": [
+        {
+          "flowType": "authorization-code",
+          "references": "",
+          "authURLParams": {
+            "code_challenge": [
+              "randomjasdjiasiudaradsiasdmkue012939123891238912398123"
+            ]
+          },
+          "tokenExchangeExtraParams": {
+            "code_verifier": [
+              "randomjasdjiasiudaradsiasdmkue012939123891238912398123"
+            ]
+          },
+          "requiredOutcome": "FAIL"
+        }
+      ]
+    }
+  ]
+  

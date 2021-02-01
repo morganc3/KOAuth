@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/chromedp/chromedp"
 	"github.com/morganc3/KOAuth/config"
@@ -32,12 +31,8 @@ const (
 	CUSTOM  CheckType = "custom"  // Custom check that is mapped to a Go function
 )
 
-var ChecksList []*Check
-
-type ChecksIn struct {
-	SupportChecks []Check `json:"supportChecks"`
-	Checks        []Check `json:"checks"`
-}
+var ChecksList []*Check        // List of normal or custom checks
+var SupportChecksList []*Check // List of "support" checks
 
 type Check struct {
 	CheckName   string `json:"name"`
@@ -61,21 +56,37 @@ type Check struct {
 	// Custom defined check function
 	CheckFunc CheckFunction `json:"-"`
 
-	Steps []Step `json:"steps,omitempty"`
+	Steps []Step `json:"steps"`
 
 	// State contains result of the check
 	State `json:"-"`
+
+	CheckType CheckType `json:"type,omitempty"`
 }
 
 func Init(checkJSONFile string, ctx context.Context, promptFlag string) {
 	Mappings = getMappings()
 	ChecksList = readChecks(ctx, checkJSONFile, promptFlag)
+
+	// Remove checks of type "support" and add them to SupportChecksList
+	for i, c := range ChecksList {
+		if c.CheckType == SUPPORT {
+			ChecksList = append(ChecksList[:i], ChecksList[i+1:]...) // remove
+			SupportChecksList = append(SupportChecksList, c)
+		}
+	}
 }
 
 // Perform check, check returns bool for if it was passed
 func (c *Check) DoCheck() {
 	var state State
 	var err error
+	if !c.checkSupported() {
+		c.SkipReason = "Check skipped due to missing support for checks defined in requiresSupport"
+		c.State = SKIP
+		return
+	}
+
 	if c.CheckFunc != nil {
 		// TODO: fix now that we're using steps
 		// state, err = c.CheckFunc(c.FlowInstance)
@@ -89,14 +100,18 @@ func (c *Check) DoCheck() {
 }
 
 func DoChecks() {
-	for _, c := range ChecksList {
+	for _, c := range SupportChecksList { // Do support checks first to determine support
+		c.DoCheck()
+	}
+	for _, c := range ChecksList { // Do the rest of checks
 		c.DoCheck()
 	}
 }
 
-// print Check results to console
+// print basic Check results to console
 func PrintResults() {
-	for _, c := range ChecksList {
+	allChecks := append(SupportChecksList, ChecksList...)
+	for _, c := range allChecks {
 		fmt.Println(c.CheckName, c.State)
 		if c.State == WARN {
 			fmt.Println("\t", c.ErrorMessage)
@@ -105,11 +120,10 @@ func PrintResults() {
 	}
 }
 
-// TODO: checks for things like redirect should be able to use either implicit or authz.
-
+// TODO: write linter for checks.json
 // TODO checks:
 // iframes allowed at consent url
-
+// scopes reflected at consent url
 // client secret not required
 
 // TODO: There should be error checking here for
@@ -120,12 +134,6 @@ func (c *Check) RunCheck() State {
 	// documentation should be added to say if a check in some cases should be
 	// skipped, we should add a skipMessage in checks.json and a skipfunction
 	// to detect if it should be skipped
-
-	if !c.checkSupported() {
-		c.SkipReason = "Check skipped due to missing support for checks defined in requiresSupport"
-		return SKIP
-	}
-
 	for i, step := range c.Steps {
 		state, _ := step.runStep()
 		step.State = state
@@ -145,8 +153,8 @@ func (c *Check) RunCheck() State {
 
 // Checks if required support checks passed
 func (c *Check) checkSupported() bool {
-	// if this is a supportCheck, return true
-	if isSupportCheck(c.CheckName) {
+	// if this is a support check, return true
+	if c.CheckType == SUPPORT {
 		return true
 	}
 	requires := c.RequiresSupport
@@ -159,13 +167,11 @@ func (c *Check) checkSupported() bool {
 		}
 	}
 
-	// TODO: all these strings needs to be constantized
-
 	// Anonymous function so that this isn't used anywhere else,
-	// as it shouldn't be used unless all supportChecks have already been run
+	// as it shouldn't be used unless all support checks have already been run
 	getSupportedFlows := func() []string {
 		supported := []string{}
-		for _, check := range ChecksList {
+		for _, check := range SupportChecksList {
 			switch check.CheckName {
 			case "implicit-flow-supported":
 				if check.State == PASS {
@@ -214,18 +220,12 @@ func (c *Check) checkSupported() bool {
 
 // Checks if required support check passed
 func supportExists(name string) bool {
-	for _, c := range ChecksList {
+	for _, c := range SupportChecksList {
 		if name == c.CheckName && c.State == PASS {
 			return true
 		}
 	}
 	return false
-}
-
-// TODO: fix this silly implementation, supportChecks and
-// normal checks should be split up in a way that makes sense and is easily determined
-func isSupportCheck(name string) bool {
-	return strings.Contains(name, "-supported")
 }
 
 func readChecks(ctx context.Context, checkFile, promptFlag string) []*Check {
@@ -234,26 +234,30 @@ func readChecks(ctx context.Context, checkFile, promptFlag string) []*Check {
 		log.Fatalf("Error opening or parsing JSON file")
 	}
 
-	var checksIn ChecksIn
-
 	var ret []*Check
-	err := json.Unmarshal(jsonBytes, &checksIn)
+	err := json.Unmarshal(jsonBytes, &ret)
 	if err != nil {
 		log.Fatalf("Error unmarshalling check JSON file:\n%s\n", err.Error())
 	}
 
-	supportChecks, ctx := processChecks(ctx, checksIn.SupportChecks, promptFlag)
-	checks, ctx := processChecks(ctx, checksIn.Checks, promptFlag)
+	ret, ctx = processChecks(ctx, ret, promptFlag)
 
-	ret = append(ret, supportChecks...)
-	ret = append(ret, checks...)
 	return ret
 }
 
-func processChecks(ctx context.Context, checks []Check, promptFlag string) ([]*Check, context.Context) {
+func processChecks(ctx context.Context, checks []*Check, promptFlag string) ([]*Check, context.Context) {
 	var ret []*Check
 	currCtx := ctx
 	for i, c := range checks {
+		switch c.CheckType {
+		case SUPPORT:
+			// add to support list
+		case CUSTOM:
+			// add to custom list
+		default:
+			// check type not set, set to normal
+			c.CheckType = NORMAL
+		}
 		for j, s := range c.Steps {
 			var responseType oauth.FlowType
 			switch s.FlowType {
@@ -276,7 +280,7 @@ func processChecks(ctx context.Context, checks []Check, promptFlag string) ([]*C
 		checks[i].CheckFunc = getMapping(c.CheckName)
 
 		// append pointer to the check to our list
-		ret = append(ret, &checks[i])
+		ret = append(ret, checks[i])
 	}
 	return ret, currCtx
 }

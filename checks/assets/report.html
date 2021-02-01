@@ -136,7 +136,7 @@
                 <p id="stepInfo${findingIndex}-${index}" style="padding-top:1em;padding-left: 2em; padding-right: 2em">{{html stepContent}}</p>
                 <div class="collapse bg-light exchangeDetails" id="collapseRequest${findingIndex}-${index}">
                   <div id="findingRequest${findingIndex}-${index}">
-                    
+
                   </div>
                 </div>
                 <div class="collapse bg-light exchangeDetails" id="collapseResponse${findingIndex}-${index}">
@@ -211,11 +211,11 @@
         var stepContent = ""
         for (item of toDisplay){
           if(step.hasOwnProperty(item.key)){
-            stepContent += "<b>"+item.display+"</b>" + ": <br>" + step[item.key] + "<br><br>";
+            stepContent += "<b>"+item.display+":</b><br>" + step[item.key] + "<br><br>";
           }
         }
 
-        if(step.hasOwnProperty("flow")){
+        if(step.hasOwnProperty("flow") && step.flow.hasOwnProperty("exchangeRequest")){
           if(step.flow.exchangeRequest.hasOwnProperty("request")){
             exchangeReqString = step.flow.exchangeRequest.request.replace(/\n/g,"<br>");;
             stepContent += "<b>Exchange Request</b>: <br>" + exchangeReqString + "<br><br>";

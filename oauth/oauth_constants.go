@@ -11,7 +11,6 @@ const (
 	SCOPE                      = "scope"
 	REFRESH_TOKEN              = "refresh_token"
 	ACCESS_TOKEN               = "access_token"
-	AUTHORIZATION_CODE         = "code"
 	CLIENT_ID                  = "client_id"
 	CLIENT_SECRET              = "client_secret"
 	USERNAME                   = "username"

@@ -73,7 +73,7 @@ func (s *Step) runStep() (State, error) {
 
 	var err error
 	switch s.FlowType {
-	case "authorization-code":
+	case oauth.FLOW_AUTHORIZATION_CODE:
 		s.AddDefaultExchangeParams()
 		deleteRequiredExchangeParams(s.TokenExchangeParams, s.DeleteTokenExchangeParams)
 		addTokenExchangeParams(s.TokenExchangeParams, s.TokenExchangeExtraParams)
@@ -96,14 +96,14 @@ func (s *Step) runStep() (State, error) {
 			return WARN, err
 		}
 
-		authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE)
+		authorizationCode := oauth.GetQueryParameterFirst(redirectedTo, oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE)
 		if authorizationCode == "" {
 			s.FailMessage = "Redirected without Authorization Code"
 			return FAIL, nil
 		}
 
 		// set authorization code from redirect uri
-		s.TokenExchangeParams[oauth.AUTHORIZATION_CODE] = []string{authorizationCode}
+		s.TokenExchangeParams[oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE] = []string{authorizationCode}
 		// perform exchange
 		tok, err := fi.Exchange(context.TODO(), s.TokenExchangeParams)
 
@@ -117,7 +117,7 @@ func (s *Step) runStep() (State, error) {
 
 		return FAIL, nil
 
-	case "implicit":
+	case oauth.FLOW_IMPLICIT:
 		err = fi.DoAuthorizationRequest()
 		// this will only be set with a value
 		// if we were redirected to the provided redirect_uri
@@ -236,11 +236,11 @@ func (s *Step) requiredRedirectParamsPresent(redirectedTo *url.URL) (bool, error
 	var getParamFunc func(*url.URL, string) []string
 	var requiredParams map[string][]string
 	switch s.FlowType {
-	case "authorization-code":
+	case oauth.FLOW_AUTHORIZATION_CODE:
 		// If authz code flow, look at query params
 		getParamFunc = oauth.GetQueryParameterAll
 		requiredParams = s.RedirectMustContainUrl
-	case "implicit":
+	case oauth.FLOW_IMPLICIT:
 		// If implicit flow, look at fragment params (parameters after "#")
 		getParamFunc = oauth.GetFragmentParameterAll
 		requiredParams = s.RedirectMustContainFragment

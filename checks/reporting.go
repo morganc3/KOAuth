@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"text/template"
+
+	"github.com/morganc3/KOAuth/oauth"
 )
 
 // structs for output format
@@ -22,7 +24,8 @@ type StepOut struct {
 
 	RequiredOutcome string `json:"requiredOutcome"`
 
-	FlowType string `json:"flowType,omitempty"`
+	FlowType     string              `json:"flowType,omitempty"`
+	FlowInstance *oauth.FlowInstance `json:"flow,omitempty"`
 
 	// State contains result of the step
 	State `json:"state"`
@@ -50,6 +53,7 @@ func (s *Step) Export() StepOut {
 		RequiredOutcome:  s.RequiredOutcome,
 		State:            s.State,
 		FlowType:         s.FlowType,
+		FlowInstance:     s.FlowInstance,
 	}
 }
 
@@ -60,7 +64,8 @@ func WriteResults(outDir string, htmlReportTemplate string) {
 	err := makeDirectory(outDir)         // create output directory if it doesn't exist
 
 	var outList []CheckOut
-	for _, c := range ChecksList {
+	allChecks := append(SupportChecksList, ChecksList...)
+	for _, c := range allChecks {
 		// only want to output some fields, so
 		// marhsal Check struct to bytes, then unmarshal it back to tmp struct
 		// then marshal to bytes and write to file
