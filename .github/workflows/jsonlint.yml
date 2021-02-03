@@ -19,7 +19,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Checks for valid JSON in rules directory
         run: |
-          echo $GITHUB_WORKSPACE
+          ls $GITHUB_WORKSPACE
           for file in $(ls $GITHUB_WORKSPACE/checks/rules/); 
             do 
               jq < $GITHUB_WORKSPACE/checks/rules/$file; 
