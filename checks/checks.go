@@ -11,8 +11,6 @@ import (
 	"github.com/morganc3/KOAuth/oauth"
 )
 
-type CheckFunction func(*oauth.FlowInstance) (State, error)
-
 type State string
 
 const (
@@ -54,7 +52,7 @@ type Check struct {
 	ErrorMessage string `json:"errorMessage,omitempty"`
 
 	// Custom defined check function
-	CheckFunc CheckFunction `json:"-"`
+	Custom *CustomCheck `json:"-"`
 
 	Steps []Step `json:"steps"`
 
@@ -62,6 +60,13 @@ type Check struct {
 	State `json:"-"`
 
 	CheckType CheckType `json:"type,omitempty"`
+}
+
+type CustomCheckFunction func(*Check, *context.Context) (State, error)
+type CustomCheckContext *context.Context
+type CustomCheck struct {
+	CheckFunction CustomCheckFunction
+	CheckContext  CustomCheckContext
 }
 
 func Init(checkJSONFile string, ctx context.Context, promptFlag string) {
@@ -87,9 +92,8 @@ func (c *Check) DoCheck() {
 		return
 	}
 
-	if c.CheckFunc != nil {
-		// TODO: fix now that we're using steps
-		// state, err = c.CheckFunc(c.FlowInstance)
+	if c.Custom != nil {
+		state, err = c.Custom.CheckFunction(c, c.Custom.CheckContext)
 	} else {
 		state = c.RunCheck()
 	}
@@ -249,35 +253,43 @@ func processChecks(ctx context.Context, checks []*Check, promptFlag string) ([]*
 	var ret []*Check
 	currCtx := ctx
 	for i, c := range checks {
-		switch c.CheckType {
-		case SUPPORT:
-			// add to support list
-		case CUSTOM:
-			// add to custom list
-		default:
-			// check type not set, set to normal
+		if c.CheckType == "" {
 			c.CheckType = NORMAL
 		}
-		for j, s := range c.Steps {
-			var responseType oauth.FlowType
-			switch s.FlowType {
-			case oauth.FLOW_AUTHORIZATION_CODE:
-				responseType = oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
-			case oauth.FLOW_IMPLICIT:
-				responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
-			default:
-				// if malformed or empty, leave this empty.
-				// support will be determined later, and
-				// this will be updated in the Step.runStep() method
-				responseType = ""
+
+		switch c.CheckType {
+		case CUSTOM:
+			funcMapping := getMapping(c.CheckName)
+			if funcMapping == nil {
+				log.Fatal("No function mapping found for check of type CUSTOM")
 			}
-			// make a new context child for each tabs
-			// update ctx to the current context of the new instance
-			newCtx, newCancel := chromedp.NewContext(currCtx)
-			checks[i].Steps[j].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType, promptFlag)
-			currCtx = newCtx
+			newCtx, _ := chromedp.NewContext(currCtx)
+			cust := CustomCheck{
+				CheckFunction: getMapping(c.CheckName),
+				CheckContext:  &newCtx,
+			}
+			c.Custom = &cust
+		default: // normal or support checks
+			for j, s := range c.Steps {
+				var responseType oauth.FlowType
+				switch s.FlowType {
+				case oauth.FLOW_AUTHORIZATION_CODE:
+					responseType = oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
+				case oauth.FLOW_IMPLICIT:
+					responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
+				default:
+					// if malformed or empty, leave this empty.
+					// support will be determined later, and
+					// this will be updated in the Step.runStep() method
+					responseType = ""
+				}
+				// make a new context child for each tabs
+				// update ctx to the current context of the new instance
+				newCtx, newCancel := chromedp.NewContext(currCtx)
+				checks[i].Steps[j].FlowInstance = oauth.NewInstance(newCtx, newCancel, responseType, promptFlag)
+				currCtx = newCtx
+			}
 		}
-		checks[i].CheckFunc = getMapping(c.CheckName)
 
 		// append pointer to the check to our list
 		ret = append(ret, checks[i])

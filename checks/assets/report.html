@@ -112,8 +112,10 @@
       <div class="findingDescription${index}">
         <p id="findingDescription${index}" class="pb-2 mb-0">{{html description}}</p>
       </div>
+      {{if stepsExist}}
       <h6>Check Steps:</h6>
       <div id="stepsFromTemplate${index}"></div>
+      {{/if}}
     </div>
   </script>
 
@@ -164,21 +166,29 @@
       if (result == "PASS") {
         findingName = `<h5 class="findingNamePass border-bottom border-gray pb-2 mb-0" id="findingName${ind}">${nameContent} - PASSED <i style="font-size: 2rem;" class="bi bi-check text-success"></i></h5>`
       } else if (result == "FAIL") {
-        findingName = `<h5 class="findingNameFail border-bottom border-gray pb-2 mb-0" id="findingName${ind}">${nameContent} - FAILED <i style="font-size: 2rem;" class="bi bi-check text-success"></i></h5>`
+        findingName = `<h5 class="findingNameFail border-bottom border-gray pb-2 mb-0" id="findingName${ind}">${nameContent} - FAILED</h5>`
       } else { // SKIPPED
         findingName = `<h5 class="findingNameSkiped border-bottom border-gray pb-2 mb-0" id="findingName${ind}">${nameContent} - SKIPPED <i style="font-size: 2rem;" class="bi bi-check text-success"></i></h5>`
       }
+
+      var stepsExist = true
+      if(finding.steps != null){
+        stepsExist = true
+      } else {
+        stepsExist = false
+      }
       
-    
       checkInfo = {
         index: ind,
         risk: risk,
         description: description,
         findingName: findingName,
+        stepsExist: stepsExist
       }
-      
       $("#findingTemplate").tmpl(checkInfo).appendTo("#findingsFromTemplate");
-      writeStepContent(finding, ind);
+      if (stepsExist) {
+        writeStepContent(finding, ind);
+      }
     }
 
     function writeStepContent(finding, findingIndex){

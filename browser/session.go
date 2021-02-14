@@ -26,7 +26,7 @@ func InitChromeSession() context.CancelFunc {
 	if proxy != "" {
 		// Be sure you trust your proxy server if you choose this option
 		ignoreCerts := chromedp.Flag("ignore-certificate-errors", true)
-		chromeOpts = append(chromedp.DefaultExecAllocatorOptions[:],
+		chromeOpts = append(chromeOpts,
 			chromedp.ProxyServer(proxy),
 			ignoreCerts,
 		)
