@@ -1,8 +1,7 @@
 # KOAuth
 ![alt text](https://github.com/morganc3/KOAuth/blob/master/docs/KOAuth.png)
 
-OAuth 2.0 automated security scanner
-Work in progress!
+OAuth 2.0 automated security scanner - Work in progress!
 
 OAuth 2.0 is difficult to create a re-usable dynamic scanner because the OAuth 2.0 specification allows redirects to be implemented using any method available to the user agent. This means you cannot simply look for a 3XX status code. 
 For this reason, this scanner uses `chromedp` to run the checks in a browser environment. 
