@@ -74,6 +74,7 @@ func Init(checkJSONFile string, ctx context.Context, promptFlag string) {
 	ChecksList = readChecks(ctx, checkJSONFile, promptFlag)
 
 	// Remove checks of type "support" and add them to SupportChecksList
+	// TODO: do this during reading checks so we don't have to remove later
 	for i, c := range ChecksList {
 		if c.CheckType == SUPPORT {
 			ChecksList = append(ChecksList[:i], ChecksList[i+1:]...) // remove
