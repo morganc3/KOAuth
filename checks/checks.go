@@ -124,9 +124,7 @@ func PrintResults() {
 	}
 }
 
-// TODO: write linter for checks.json
 // TODO checks:
-// iframes allowed at consent url
 // scopes reflected at consent url
 // client secret not required
 
