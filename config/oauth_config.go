@@ -10,22 +10,23 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var OAuthConfig KOAuthConfig
+// OAuthConfig - KOAuth oauth config. different from Golang's oauth2 config object.
+var OAuthConfig kOAuthConfig
 
-type EndpointWrapper struct {
+type endpointWrapper struct {
 	AuthURL  string `json:"auth_url"`
 	TokenURL string `json:"token_url"`
 }
 
-type OAuthConfigWrapper struct {
+type oAuthConfigWrapper struct {
 	ClientID     string          `json:"client_id"`
 	ClientSecret string          `json:"client_secret"`
-	Endpoint     EndpointWrapper `json:"endpoint"`
+	Endpoint     endpointWrapper `json:"endpoint"`
 	RedirectURL  string          `json:"redirect_url"`
 	Scopes       []string        `json:"scopes"`
 }
 
-type KOAuthConfig struct {
+type kOAuthConfig struct {
 	OAuth2Config oauth2.Config
 }
 
@@ -40,7 +41,7 @@ func readOAuthConfig(oauthConfigFile string, authStyle string) oauth2.Config {
 	if err != nil {
 		panic("Error reading oauth config JSON file")
 	}
-	var conf OAuthConfigWrapper
+	var conf oAuthConfigWrapper
 	err = json.Unmarshal(byteValue, &conf)
 	if err != nil {
 		panic("Error unmarshalling oauth config")
@@ -77,22 +78,23 @@ func getHost(urlStr string) string {
 	return url.Host
 }
 
-func (c *KOAuthConfig) GetRedirectURIHost() string {
+func (c *kOAuthConfig) GetRedirectURIHost() string {
 	return getHost(c.OAuth2Config.RedirectURL)
 }
 
-func (c *KOAuthConfig) GetConfigHost() string {
+func (c *kOAuthConfig) GetConfigHost() string {
 	return getHost(c.OAuth2Config.Endpoint.AuthURL)
 }
 
-func NewConfig(oauthConfigFile, authStyle string) KOAuthConfig {
-	conf := new(KOAuthConfig)
+func newConfig(oauthConfigFile, authStyle string) kOAuthConfig {
+	conf := new(kOAuthConfig)
 	conf.OAuth2Config = readOAuthConfig(oauthConfigFile, authStyle)
 	return *conf
 }
 
-func (c *KOAuthConfig) Init() {
-	configFile := GetOpt(FLAG_CONFIG)
-	clientAuth := GetOpt(FLAG_CLIENT_AUTH)
-	OAuthConfig = NewConfig(configFile, clientAuth)
+// Init - initialize KOAuthConfig object based on cli flags and oauth config file
+func (c *kOAuthConfig) Init() {
+	configFile := GetOpt(FlagConfig)
+	clientAuth := GetOpt(FlagClientAuth)
+	OAuthConfig = newConfig(configFile, clientAuth)
 }

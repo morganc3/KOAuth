@@ -14,7 +14,7 @@ import (
 
 // structs for output format
 
-type StepOut struct {
+type stepOut struct {
 	//fields taken from Step.FlowInstance
 	AuthorizationURL string `json:"authorizationURL"`
 	RedirectedToURL  string `json:"redirectedToURL"`
@@ -28,10 +28,10 @@ type StepOut struct {
 	FlowInstance *oauth.FlowInstance `json:"flow,omitempty"`
 
 	// State contains result of the step
-	State `json:"state"`
+	State string `json:"state"`
 }
 
-type CheckOut struct {
+type checkOut struct {
 	CheckName    string    `json:"name"`
 	RiskRating   string    `json:"risk"`
 	Description  string    `json:"description"`
@@ -39,39 +39,39 @@ type CheckOut struct {
 	References   string    `json:"references,omitempty"`
 	FailMessage  string    `json:"failMessage,omitempty"`
 	ErrorMessage string    `json:"errorMessage,omitempty"`
-	Steps        []StepOut `json:"steps,omitempty"`
-	State        `json:"state"`
+	Steps        []stepOut `json:"steps,omitempty"`
+	State        string    `json:"state"`
 }
 
 // convert Step to StepOut
-func (s *Step) Export() StepOut {
-	return StepOut{
+func (s *step) export() stepOut {
+	return stepOut{
 		AuthorizationURL: s.FlowInstance.AuthorizationURL.String(),
 		RedirectedToURL:  s.FlowInstance.RedirectedToURL.String(),
-		FailMessage:      s.FailMessage,
-		ErrorMessage:     s.ErrorMessage,
+		FailMessage:      s.failMessage,
+		ErrorMessage:     s.errorMessage,
 		RequiredOutcome:  s.RequiredOutcome,
-		State:            s.State,
+		State:            string(s.state),
 		FlowType:         s.FlowType,
 		FlowInstance:     s.FlowInstance,
 	}
 }
 
-// Write Check results in JSON format to file
+// WriteResults - Write Check results in JSON format to file
 // and generate HTML report
 func WriteResults(outDir string, htmlReportTemplate string) {
 	outDir = removeTrailingSlash(outDir) // remove trailing slash from provided dir
 	err := makeDirectory(outDir)         // create output directory if it doesn't exist
 
-	var outList []CheckOut
-	allChecks := append(SupportChecksList, ChecksList...)
+	var outList []checkOut
+	allChecks := append(supportChecksList, checksList...)
 	for _, c := range allChecks {
 		// only want to output some fields, so
 		// marhsal Check struct to bytes, then unmarshal it back to tmp struct
 		// then marshal to bytes and write to file
 
-		var outCheck CheckOut
-		if c.State != SKIP {
+		var outCheck checkOut
+		if c.state != skip {
 			c.SkipReason = ""
 		}
 
@@ -87,12 +87,12 @@ func WriteResults(outDir string, htmlReportTemplate string) {
 
 		steps := c.Steps
 		// Export steps to format for outputting
-		outCheck.Steps = []StepOut{}
+		outCheck.Steps = []stepOut{}
 		for _, s := range steps {
-			outCheck.Steps = append(outCheck.Steps, s.Export())
+			outCheck.Steps = append(outCheck.Steps, s.export())
 		}
 
-		outCheck.State = c.State
+		outCheck.State = string(c.state)
 		outList = append(outList, outCheck)
 	}
 
@@ -132,7 +132,7 @@ func makeDirectory(outDir string) error {
 }
 
 // render html report template
-func renderTemplate(co []CheckOut, htmlReportTemplate, htmlReportPath string) {
+func renderTemplate(co []checkOut, htmlReportTemplate, htmlReportPath string) {
 	t := template.New("HTML Report").Delims("[%[", "]%]")
 
 	htmlFile, err := os.Open(htmlReportTemplate)

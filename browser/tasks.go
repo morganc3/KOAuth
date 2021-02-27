@@ -10,8 +10,8 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-// Wait until we get a redirect to a URL that contains our redirect URI's host
-// There is no easy way to do this with the chromedp API's, so we literally
+// WaitRedirect - Wait until we get a redirect to a URL that contains our redirect URI's host
+// There is no easy way to do this with the chromedp API's, so we
 // watch events until we get one that is a EventRequestWillBeSent type with
 // a URL of our redirectURI
 func WaitRedirect(ctx context.Context, host, path string) <-chan *url.URL {
@@ -42,10 +42,13 @@ func WaitRedirect(ctx context.Context, host, path string) <-chan *url.URL {
 	return ch
 }
 
+// ResponseHeaders - HTTP Response Headers from chromedp request
 type ResponseHeaders *map[string]interface{}
+
+// ResponseBody - HTTP response Body from chromedp request
 type ResponseBody *string
 
-// TODO: fix issue around getting response body
+// Load - TODO: FIX this, currently broken. attemps to get both body and http headers
 // note: body works for google.com and not example.com
 //       and headers works for example.com and not google.com
 func Load(url string) (ResponseHeaders, ResponseBody) {

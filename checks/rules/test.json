@@ -45,12 +45,5 @@
           "requiredOutcome": "FAIL"
         }
       ]
-    },
-    {
-      "name": "clickjacking-in-oauth-handshake",
-      "type": "custom",
-      "risk": "high",
-      "description": "iframes are not prevented in the consent screen. This is particularly dangeorus for the OAuth handshake, as generally granting consent involves one single click. This can, in many cases, lead to a clickjacking attack that allows a single-click clickjacking account takeover attack.",
-      "references":""
     }
   ]

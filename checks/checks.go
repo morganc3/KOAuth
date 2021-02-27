@@ -11,28 +11,28 @@ import (
 	"github.com/morganc3/KOAuth/oauth"
 )
 
-type State string
+type state string
 
 const (
-	PASS State = "PASS" // Test passed
-	FAIL State = "FAIL" // Test failed
-	WARN State = "WARN" // Warning, likely some issue with the test
-	INFO State = "INFO" // Informational
-	SKIP State = "SKIP" // Skipped for some reason
+	pass state = "PASS" // Test passed
+	fail state = "FAIL" // Test failed
+	warn state = "WARN" // Warning, likely some issue with the test
+	info state = "INFO" // Informational
+	skip state = "SKIP" // Skipped for some reason
 )
 
-type CheckType string
+type checkType string
 
 const (
-	SUPPORT CheckType = "support" // Check to see if something is supported
-	NORMAL  CheckType = "normal"  // Normal check defined by provided JSON check file
-	CUSTOM  CheckType = "custom"  // Custom check that is mapped to a Go function
+	support checkType = "support" // Check to see if something is supported
+	normal  checkType = "normal"  // Normal check defined by provided JSON check file
+	custom  checkType = "custom"  // Custom check that is mapped to a Go function
 )
 
-var ChecksList []*Check        // List of normal or custom checks
-var SupportChecksList []*Check // List of "support" checks
+var checksList []*check        // List of normal or custom checks
+var supportChecksList []*check // List of "support" checks
 
-type Check struct {
+type check struct {
 	CheckName   string `json:"name"`
 	RiskRating  string `json:"risk"`
 	Description string `json:"description"`
@@ -45,81 +45,84 @@ type Check struct {
 	RequiresSupport []string `json:"requiresSupport,omitempty"`
 
 	// Output message giving information about why the check failed
-	FailMessage string `json:"-"`
+	failMessage string `json:"-"`
 
 	// Output message giving information about an error that occurred during
 	// the check
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	errorMessage string `json:"-"`
 
 	// Custom defined check function
-	Custom *CustomCheck `json:"-"`
+	custom *customCheck `json:"-"`
 
-	Steps []Step `json:"steps"`
+	Steps []step `json:"steps"`
 
 	// State contains result of the check
-	State `json:"-"`
+	state `json:"-"`
 
-	CheckType CheckType `json:"type,omitempty"`
+	CheckType checkType `json:"type,omitempty"`
 }
 
-type CustomCheckFunction func(*Check, *context.Context) (State, error)
-type CustomCheckContext *context.Context
-type CustomCheck struct {
-	CheckFunction CustomCheckFunction
-	CheckContext  CustomCheckContext
+type customCheckFunction func(*check, *context.Context) (state, error)
+type customCheckContext *context.Context
+type customCheck struct {
+	checkFunction customCheckFunction
+	checkContext  customCheckContext
 }
 
-func Init(checkJSONFile string, ctx context.Context, promptFlag string) {
-	Mappings = getMappings()
-	ChecksList = readChecks(ctx, checkJSONFile, promptFlag)
+// Init - initializes checks by reading checks from files, identifying
+// custom definitions for checks, setting up support checks
+func Init(ctx context.Context, checkJSONFile string, promptFlag string) {
+	mappings = getMappings()
+	checksList = readChecks(ctx, checkJSONFile, promptFlag)
 
 	// Remove checks of type "support" and add them to SupportChecksList
 	// TODO: do this during reading checks so we don't have to remove later
-	for i, c := range ChecksList {
-		if c.CheckType == SUPPORT {
-			ChecksList = append(ChecksList[:i], ChecksList[i+1:]...) // remove
-			SupportChecksList = append(SupportChecksList, c)
+	for i, c := range checksList {
+		if c.CheckType == support {
+			checksList = append(checksList[:i], checksList[i+1:]...) // remove
+			supportChecksList = append(supportChecksList, c)
 		}
 	}
 }
 
-// Perform check, check returns bool for if it was passed
-func (c *Check) DoCheck() {
-	var state State
+// identifies if a check is supported, if so, runs the check
+func (c *check) doCheck() {
+	var state state
 	var err error
 	if !c.checkSupported() {
 		c.SkipReason = "Check skipped due to missing support for checks defined in requiresSupport"
-		c.State = SKIP
+		c.state = skip
 		return
 	}
 
-	if c.Custom != nil {
-		state, err = c.Custom.CheckFunction(c, c.Custom.CheckContext)
+	if c.custom != nil {
+		state, err = c.custom.checkFunction(c, c.custom.checkContext)
 	} else {
-		state = c.RunCheck()
+		state = c.runCheck()
 	}
-	c.State = state
+	c.state = state
 	if err != nil {
-		c.ErrorMessage = err.Error()
+		c.errorMessage = err.Error()
 	}
 }
 
+// DoChecks - completes each support check, followed by other checks
 func DoChecks() {
-	for _, c := range SupportChecksList { // Do support checks first to determine support
-		c.DoCheck()
+	for _, c := range supportChecksList { // Do support checks first to determine support
+		c.doCheck()
 	}
-	for _, c := range ChecksList { // Do the rest of checks
-		c.DoCheck()
+	for _, c := range checksList { // Do the rest of checks
+		c.doCheck()
 	}
 }
 
-// print basic Check results to console
+// PrintResults - print basic Check results to console
 func PrintResults() {
-	allChecks := append(SupportChecksList, ChecksList...)
+	allChecks := append(supportChecksList, checksList...)
 	for _, c := range allChecks {
-		fmt.Println(c.CheckName, c.State)
-		if c.State == WARN {
-			fmt.Println("\t", c.ErrorMessage)
+		fmt.Println(c.CheckName, c.state)
+		if c.state == warn {
+			fmt.Println("\t", c.errorMessage)
 		}
 		fmt.Println("")
 	}
@@ -132,32 +135,35 @@ func PrintResults() {
 // TODO: There should be error checking here for
 // different errors, such as if we get an "error" URL parameter
 // returned in redirect URI, or if there is an internal error
-func (c *Check) RunCheck() State {
+
+// runCheck - runs each step of a check, returning the
+// state of the check, indicating its outcome
+func (c *check) runCheck() state {
 	// TODO check if check should be skipped
 	// documentation should be added to say if a check in some cases should be
 	// skipped, we should add a skipMessage in checks.json and a skipfunction
 	// to detect if it should be skipped
 	for i, step := range c.Steps {
 		state, _ := step.runStep()
-		step.State = state
+		step.state = state
 		c.Steps[i] = step
-		if state == PASS && step.RequiredOutcome == OUTCOME_SUCCEED {
+		if state == pass && step.RequiredOutcome == outcomeSucceed {
 			continue
 		}
-		if state != PASS && step.RequiredOutcome == OUTCOME_FAIL {
+		if state != pass && step.RequiredOutcome == outcomeFail {
 			continue
 		}
 
 		// Check failed
-		return FAIL
+		return fail
 	}
-	return PASS
+	return pass
 }
 
 // Checks if required support checks passed
-func (c *Check) checkSupported() bool {
+func (c *check) checkSupported() bool {
 	// if this is a support check, return true
-	if c.CheckType == SUPPORT {
+	if c.CheckType == support {
 		return true
 	}
 	requires := c.RequiresSupport
@@ -174,15 +180,15 @@ func (c *Check) checkSupported() bool {
 	// as it shouldn't be used unless all support checks have already been run
 	getSupportedFlows := func() []string {
 		supported := []string{}
-		for _, check := range SupportChecksList {
+		for _, check := range supportChecksList {
 			switch check.CheckName {
 			case "implicit-flow-supported":
-				if check.State == PASS {
-					supported = append(supported, oauth.FLOW_IMPLICIT)
+				if check.state == pass {
+					supported = append(supported, oauth.FlowImplicit)
 				}
 			case "authorization-code-flow-supported":
-				if check.State == PASS {
-					supported = append(supported, oauth.FLOW_AUTHORIZATION_CODE)
+				if check.state == pass {
+					supported = append(supported, oauth.FlowAuthorizationCode)
 				}
 			}
 		}
@@ -199,12 +205,12 @@ func (c *Check) checkSupported() bool {
 	// this check
 	for i, s := range c.Steps {
 		switch s.FlowType {
-		case oauth.FLOW_IMPLICIT:
-			if !sliceContains(supportedFlows, oauth.FLOW_IMPLICIT) {
+		case oauth.FlowImplicit:
+			if !sliceContains(supportedFlows, oauth.FlowImplicit) {
 				return false
 			}
-		case oauth.FLOW_AUTHORIZATION_CODE:
-			if !sliceContains(supportedFlows, oauth.FLOW_AUTHORIZATION_CODE) {
+		case oauth.FlowAuthorizationCode:
+			if !sliceContains(supportedFlows, oauth.FlowAuthorizationCode) {
 				return false
 			}
 		default:
@@ -223,21 +229,21 @@ func (c *Check) checkSupported() bool {
 
 // Checks if required support check passed
 func supportExists(name string) bool {
-	for _, c := range SupportChecksList {
-		if name == c.CheckName && c.State == PASS {
+	for _, c := range supportChecksList {
+		if name == c.CheckName && c.state == pass {
 			return true
 		}
 	}
 	return false
 }
 
-func readChecks(ctx context.Context, checkFile, promptFlag string) []*Check {
+func readChecks(ctx context.Context, checkFile, promptFlag string) []*check {
 	jsonBytes := config.GenerateChecksInput(checkFile)
 	if len(jsonBytes) <= 0 {
 		log.Fatalf("Error opening or parsing JSON file")
 	}
 
-	var ret []*Check
+	var ret []*check
 	err := json.Unmarshal(jsonBytes, &ret)
 	if err != nil {
 		log.Fatalf("Error unmarshalling check JSON file:\n%s\n", err.Error())
@@ -248,34 +254,34 @@ func readChecks(ctx context.Context, checkFile, promptFlag string) []*Check {
 	return ret
 }
 
-func processChecks(ctx context.Context, checks []*Check, promptFlag string) ([]*Check, context.Context) {
-	var ret []*Check
+func processChecks(ctx context.Context, checks []*check, promptFlag string) ([]*check, context.Context) {
+	var ret []*check
 	currCtx := ctx
 	for i, c := range checks {
 		if c.CheckType == "" {
-			c.CheckType = NORMAL
+			c.CheckType = normal
 		}
 
 		switch c.CheckType {
-		case CUSTOM:
+		case custom:
 			funcMapping := getMapping(c.CheckName)
 			if funcMapping == nil {
 				log.Fatal("No function mapping found for check of type CUSTOM")
 			}
 			newCtx, _ := chromedp.NewContext(currCtx)
-			cust := CustomCheck{
-				CheckFunction: getMapping(c.CheckName),
-				CheckContext:  &newCtx,
+			cust := customCheck{
+				checkFunction: getMapping(c.CheckName),
+				checkContext:  &newCtx,
 			}
-			c.Custom = &cust
+			c.custom = &cust
 		default: // normal or support checks
 			for j, s := range c.Steps {
 				var responseType oauth.FlowType
 				switch s.FlowType {
-				case oauth.FLOW_AUTHORIZATION_CODE:
-					responseType = oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
-				case oauth.FLOW_IMPLICIT:
-					responseType = oauth.IMPLICIT_FLOW_RESPONSE_TYPE
+				case oauth.FlowAuthorizationCode:
+					responseType = oauth.AuthorizationCodeFlowResponseType
+				case oauth.FlowImplicit:
+					responseType = oauth.ImplicitFlowResponseType
 				default:
 					// if malformed or empty, leave this empty.
 					// support will be determined later, and

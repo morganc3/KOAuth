@@ -17,27 +17,28 @@ import (
 // this check cannot be easily implemented
 // via our checks JSON format
 
-func ClickjackingCheck(c *Check, ctx *context.Context) (State, error) {
+func clickjackingCheck(c *check, ctx *context.Context) (state, error) {
 	// listen network event
-	authzCodeUrl := oauth.GenerateAuthorizationURL(oauth.AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE, "random-state", config.GetOpt(config.FLAG_PROMPT))
+	authzCodeURL := oauth.GenerateAuthorizationURL(oauth.AuthorizationCodeFlowResponseType, "random-state", config.GetOpt(config.FlagPrompt))
 
 	allHeaders := make(map[string][]string)
-	domain := authzCodeUrl.Host
+	domain := authzCodeURL.Host
 	listenForNetworkEvent(*ctx, domain, allHeaders)
 
 	actions := []chromedp.Action{network.Enable(),
-		chromedp.Navigate(authzCodeUrl.String()),
+		chromedp.Navigate(authzCodeURL.String()),
 		chromedp.WaitVisible(`body`, chromedp.BySearch)}
 
-	browser.RunWithTimeOut(ctx, time.Duration(config.GetOptAsInt(config.FLAG_TIMEOUT)), actions)
+	browser.RunWithTimeOut(ctx, time.Duration(config.GetOptAsInt(config.FlagTimeout)), actions)
 
 	if allowsIframes(allHeaders) {
-		return FAIL, nil
-	} else {
-		return PASS, nil
+		return fail, nil
 	}
+
+	return pass, nil
 }
 
+// identify if headers are present that would prevent iframes
 func allowsIframes(allHeaders map[string][]string) bool {
 	if vals, ok := allHeaders["x-frame-options"]; ok {
 		for _, v := range vals {

@@ -9,6 +9,8 @@ import (
 	"github.com/morganc3/KOAuth/config"
 )
 
+// Execute - Parse CLI flags, OAuth configuration file,
+// initialize browser session, and begin performing checks
 func Execute() {
 	config.CliFlags.InitCliFlags() // Initialize and Parse CLI Flags
 
@@ -20,18 +22,18 @@ func Execute() {
 	// first tab's context and CancelFunc
 	// this will be the first window, which
 	// sets up authentication to the authorization server
-	fctx, fctxCancel := initSession(config.GetOpt(config.FLAG_AUTHENTICATION_URL))
+	fctx, fctxCancel := initSession(config.GetOpt(config.FlagAuthenticationURL))
 	defer fctxCancel()
 
-	checkFile := config.GetOpt(config.FLAG_CHECKS)
-	promptFlag := config.GetOpt(config.FLAG_PROMPT)
-	outDir := config.GetOpt(config.FLAG_OUT)
-	reportTemplate := config.GetOpt(config.FLAG_REPORT_TEMPLATE)
+	checkFile := config.GetOpt(config.FlagChecks)
+	promptFlag := config.GetOpt(config.FlagPrompt)
+	outDir := config.GetOpt(config.FlagOut)
+	reportTemplate := config.GetOpt(config.FlagReportTemplate)
 	performChecks(fctx, checkFile, promptFlag, outDir, reportTemplate)
 }
 
 func performChecks(ctx context.Context, checkFile, promptFlag, outDir, htmlReportTemplate string) {
-	checks.Init(checkFile, ctx, promptFlag)
+	checks.Init(ctx, checkFile, promptFlag)
 	checks.DoChecks()
 	checks.PrintResults()
 	checks.WriteResults(outDir, htmlReportTemplate)

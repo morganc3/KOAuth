@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -16,16 +17,17 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// TODO: FlowType should really be "ResponseType" to be more accurate,
+// FlowType TODO: FlowType should really be "ResponseType" to be more accurate,
 // this will also clear up confusion between FlowType in Check struct
 type FlowType string
 
+// Response types
 const (
-	IMPLICIT_FLOW_RESPONSE_TYPE           = "token"
-	AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE = "code"
+	ImplicitFlowResponseType          = "token"
+	AuthorizationCodeFlowResponseType = "code"
 )
 
-// json tags here because this is used in the report output
+// FlowInstance - Represents an instance of an OAuth 2.0 Flow
 type FlowInstance struct {
 	FlowType            FlowType           `json:"-"`
 	FlowTimeoutSeconds  time.Duration      `json:"-"`
@@ -37,6 +39,7 @@ type FlowInstance struct {
 	ExchangeRequest     *ExchangeRequest   `json:"exchangeRequest,omitempty"`
 }
 
+// ExchangeRequest - Represents an authorization code exchange request for an Access Token
 type ExchangeRequest struct {
 	RequestString  string         `json:"request,omitempty"`
 	ResponseString string         `json:"response,omitempty"`
@@ -55,15 +58,16 @@ type ExchangeRequest struct {
 // Scenario A is accounted for currently, as we use the same
 // chrome context for each check.
 
+// NewInstance - Creates a new OAuth flow instance
 func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType, promptFlag string) *FlowInstance {
-	redirectUri, err := url.Parse(config.OAuthConfig.OAuth2Config.RedirectURL)
+	redirectURI, err := url.Parse(config.OAuthConfig.OAuth2Config.RedirectURL)
 	if err != nil {
 		log.Fatalf("Failed to parse provided redirect_uri in config file")
 	}
 	flowInstance := FlowInstance{
 		FlowType:            ft,
-		FlowTimeoutSeconds:  time.Duration(config.GetOptAsInt(config.FLAG_TIMEOUT)),
-		ProvidedRedirectURL: redirectUri,
+		FlowTimeoutSeconds:  time.Duration(config.GetOptAsInt(config.FlagTimeout)),
+		ProvidedRedirectURL: redirectURI,
 		RedirectedToURL:     new(url.URL),
 		Ctx:                 cx,
 		Cancel:              cancel,
@@ -73,6 +77,9 @@ func NewInstance(cx context.Context, cancel context.CancelFunc, ft FlowType, pro
 	return &flowInstance
 }
 
+// DoAuthorizationRequest - Perform OAuth 2.0 authorization request
+// based on the values from the oauth config.
+// Waits for redirect to expected redirect URL
 func (i *FlowInstance) DoAuthorizationRequest() error {
 	var actions []chromedp.Action
 
@@ -82,7 +89,7 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 	// adds listener which will cancel the context
 	// if a redirect to redirect_uri occurs
 	ch := browser.WaitRedirect(i.Ctx, i.ProvidedRedirectURL.Host, i.ProvidedRedirectURL.Path)
-	c, err := browser.RunWithTimeOut(&i.Ctx, time.Duration(config.GetOptAsInt(config.FLAG_TIMEOUT)), actions)
+	c, err := browser.RunWithTimeOut(&i.Ctx, time.Duration(config.GetOptAsInt(config.FlagTimeout)), actions)
 	if err != nil {
 		return err
 	}
@@ -98,10 +105,13 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 		}
 	}
 
+	fmt.Println(i.RedirectedToURL)
+
 	return err
 
 }
 
+// Exchange - uses forked version of oauth2 package
 // Same as Exchange() from https://github.com/golang/oauth2 but
 // takes arbitrary url values and gives access to HTTP request and response
 func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Token, error) {
@@ -132,8 +142,9 @@ func (i *FlowInstance) Exchange(ctx context.Context, v url.Values) (*oauth2.Toke
 
 }
 
+// GenerateAuthorizationURL - generates oauth2 authorization url based on config values
 func GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.URL {
-	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam(RESPONSE_TYPE, string(flowType))
+	var option oauth2.AuthCodeOption = oauth2.SetAuthURLParam(ResponseTypeParam, string(flowType))
 	URLString := config.OAuthConfig.OAuth2Config.AuthCodeURL(state, option)
 	URL, err := url.Parse(URLString)
 	if err != nil {
@@ -152,20 +163,22 @@ func GenerateAuthorizationURL(flowType FlowType, state, promptFlag string) *url.
 	return URL
 }
 
-// update FlowType value and update Authorization URL
+// UpdateFlowType - update FlowType value and update Authorization URL
 func (i *FlowInstance) UpdateFlowType(ft string) {
 	var responeType string
 	switch ft {
-	case FLOW_IMPLICIT:
-		responeType = IMPLICIT_FLOW_RESPONSE_TYPE
-	case FLOW_AUTHORIZATION_CODE:
-		responeType = AUTHORIZATION_CODE_FLOW_RESPONSE_TYPE
+	case FlowImplicit:
+		responeType = ImplicitFlowResponseType
+	case FlowAuthorizationCode:
+		responeType = AuthorizationCodeFlowResponseType
 	}
 
 	i.FlowType = FlowType(responeType)
-	SetQueryParameter(i.AuthorizationURL, RESPONSE_TYPE, responeType)
+	SetQueryParameter(i.AuthorizationURL, ResponseTypeParam, responeType)
 }
 
+// GetImplicitAccessTokenFromURL gets access token from URL fragment
+// during implicit flow
 func GetImplicitAccessTokenFromURL(urlString string) string {
 	u, err := url.Parse(urlString)
 	if err != nil {
@@ -173,7 +186,7 @@ func GetImplicitAccessTokenFromURL(urlString string) string {
 	}
 
 	values, _ := url.ParseQuery(u.Fragment)
-	tokenString := values.Get(ACCESS_TOKEN)
+	tokenString := values.Get(AccessTokenParam)
 	return tokenString
 }
 

@@ -13,9 +13,10 @@ require (
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/ogier/pflag v0.0.1
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/net v0.0.0-20200904194848-62affa334b73
+	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f // indirect
+	golang.org/x/tools v0.1.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4
 )
 

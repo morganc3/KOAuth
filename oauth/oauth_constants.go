@@ -2,29 +2,33 @@ package oauth
 
 // OAuth 2.0 HTTP parameter constants
 const (
-	REDIRECT_URI               = "redirect_uri"
-	RESPONSE_TYPE              = "response_type"
-	GRANT_TYPE                 = "grant_type"
-	STATE                      = "state"
-	TOKEN_TYPE                 = "token_type"
-	EXPIRES_IN                 = "expires_in"
-	SCOPE                      = "scope"
-	REFRESH_TOKEN              = "refresh_token"
-	ACCESS_TOKEN               = "access_token"
-	CLIENT_ID                  = "client_id"
-	CLIENT_SECRET              = "client_secret"
-	USERNAME                   = "username"
-	PASSWORD                   = "password"
-	ERROR                      = "error"
-	PKCE_S256                  = "S256"
-	PKCE_PLAIN                 = "plain"
-	PKCE_CODE_VERIFIER         = "code_verifier"
-	PKCE_CODE_CHALLENGE        = "code_challenge"
-	PKCE_CODE_CHALLENGE_METHOD = "code_challenge_method"
+	RedirectURIParam             = "redirect_uri"
+	ResponseTypeParam            = "response_type"
+	GrantTypeParam               = "grant_type"
+	StateParam                   = "state"
+	TokenTypeParam               = "token_type"
+	ExpiresInParam               = "expires_in"
+	ScopeParam                   = "scope"
+	RefreshTokenParam            = "refresh_token"
+	AccessTokenParam             = "access_token"
+	ClientIDParam                = "client_id"
+	ClientSecretParam            = "client_secret"
+	UsernameParam                = "username"
+	PasswordParam                = "password"
+	ErrorParam                   = "error"
+	PKCECodeVerifierParam        = "code_verifier"
+	PKCECodeChallengeParam       = "code_challenge"
+	PKCECodeChallengeMethodParam = "code_challenge_method"
+)
+
+// PKCE code challenge method param values
+const (
+	PKCES256  = "S256"
+	PKCEPLAIN = "plain"
 )
 
 // OAuth 2.0 flow types, as defined in provided JSON check structure
 const (
-	FLOW_AUTHORIZATION_CODE = "authorization-code"
-	FLOW_IMPLICIT           = "implicit"
+	FlowAuthorizationCode = "authorization-code"
+	FlowImplicit          = "implicit"
 )

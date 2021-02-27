@@ -17,13 +17,13 @@ import (
 // or the context times out. The purpose of this initialization is to
 // setup cookies, localstorage, indexdb, etc. in the browser.
 
-func initSession(authUrl string) (context.Context, context.CancelFunc) {
+func initSession(authURL string) (context.Context, context.CancelFunc) {
 	ctx, cancel := chromedp.NewContext(browser.ChromeExecContext)
 
 	// if an authUrl was provided, auth there and return. Otherwise we
 	// will do an oauth flow which should prompt the user to authenticate
-	if authUrl != "" {
-		waitForAuth(ctx, authUrl)
+	if authURL != "" {
+		waitForAuth(ctx, authURL)
 		return ctx, cancel
 	}
 
@@ -35,7 +35,7 @@ func initSession(authUrl string) (context.Context, context.CancelFunc) {
 	// when they have authenticated
 
 	// We should be prompted for auth as this is our first request
-	i := oauth.NewInstance(ctx, cancel, oauth.IMPLICIT_FLOW_RESPONSE_TYPE, "DONT_SEND")
+	i := oauth.NewInstance(ctx, cancel, oauth.ImplicitFlowResponseType, "DONT_SEND")
 
 	urlString := i.AuthorizationURL.String()
 
