@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -104,8 +103,6 @@ func (i *FlowInstance) DoAuthorizationRequest() error {
 			return err
 		}
 	}
-
-	fmt.Println(i.RedirectedToURL)
 
 	return err
 
